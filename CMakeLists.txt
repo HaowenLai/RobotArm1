@@ -20,10 +20,6 @@ include_directories(
 #all source put here
 #set(sqrtFunc ${DIR_SRCS})
 
-add_executable(main src/main.cpp src/rsDev.cpp)
-#add_executable(rsDev src/rsDev.cpp)
-#add_executable(takePhoto src/takePhoto.cpp)
+add_executable(main src/main.cpp src/RsVideoCapture.cpp)
 
 target_link_libraries(main ${OpenCV_LIBS} realsense2)
-#target_link_libraries(rsDev ${OpenCV_LIBS} realsense2)
-#target_link_libraries(takePhoto ${OpenCV_LIBS})

@@ -1,22 +1,9 @@
-#include "rsDev.h"
-#include <opencv2/opencv.hpp>
-#include <opencv2/aruco.hpp>
-#include <librealsense2/rs.hpp>
+#include "RsVideoCapture.hpp"
+#include "ArucoMarker.hpp"
 
 using namespace cv;
 using namespace std;
 
-//to generate ArUco markers, just use once
-inline void generateMarker(int id)
-{
-    Mat markerImg;
-    auto dict = aruco::getPredefinedDictionary(aruco::DICT_5X5_50);
-    aruco::drawMarker(dict, id, 80, markerImg, 1);
-
-    namedWindow("haha", WINDOW_AUTOSIZE);
-    imshow("haha", markerImg);
-    waitKey(0);
-}
 
 //help message
 inline void helpMsg()

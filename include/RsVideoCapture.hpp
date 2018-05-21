@@ -6,8 +6,8 @@
  * Copyright(c) All right reserved
  * *******************************************/
 
-#ifndef __RSDEV_H__
-#define __RSDEV_H__
+#ifndef __RSVIDEOCAPTURE_HPP__
+#define __RSVIDEOCAPTURE_HPP__
 
 #include <librealsense2/rs.hpp>
 #include <opencv2/opencv.hpp>
@@ -16,10 +16,20 @@
 class RsVideoCapture
 {
   public:
+    //SerialNumber can be read in the box. If no S/N is passed,
+    //it will open a Realsense device randomly
     RsVideoCapture(const char* serialNumber = nullptr);
+
+    //Overload >> , to put a color image to a cv::Mat
     RsVideoCapture& operator>>(cv::Mat& img);
+  
   private:
+    //Transform RS frame to cv::Mat and get both color image and 
+    //depth raw information, though its parameter only contain `colorMat`
     void getMat(cv::Mat& colorMat);
+
+    //Depth scale of each RS device may be different, so we need to get it.
+    //Called in the construct function
     float get_depth_scale(rs2::device dev);
 
   public:
@@ -30,6 +40,8 @@ class RsVideoCapture
     
 };
 
+//Simply keep the pixel between range (distMin,distMax).
+//The result of this func is not satisfying.
 void remove_background(cv::Mat& colorImg, RsVideoCapture& camera,
                        float distMin, float distMax);
 

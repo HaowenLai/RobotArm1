@@ -2,10 +2,8 @@
  *   this file use opencv to display color and depth images
  * from RealSense.
  * ********************************************************/
-#include "rsDev.h"
 
-#include <librealsense2/rs.hpp>
-#include <opencv2/opencv.hpp>
+#include "RsVideoCapture.hpp"
 
 //-------------------- Definition of class `RsVideoCapture`------------------
 //public
