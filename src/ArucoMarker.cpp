@@ -19,9 +19,10 @@ ArucoMarker::ArucoMarker(
     cameraMatrix(cameraMat),
     distCoeffs(distCoeff),
     specificMarkIndex(-1),
+    dict(aruco::getPredefinedDictionary(dn)),
     origin_rVecs(Vec3d(0,0,0)),
-    origin_tVecs(Vec3d(0,0,0)),
-    dict(aruco::getPredefinedDictionary(dn))
+    origin_tVecs(Vec3d(0,0,0))
+    
 { }
 
 void ArucoMarker::calibrateOrigin()

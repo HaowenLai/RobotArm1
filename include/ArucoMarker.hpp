@@ -32,12 +32,12 @@ class ArucoMarker
     
     cv::Ptr<cv::aruco::Dictionary> dict;
     std::vector<int> markerIds;
-    std::vector<vector<cv::Point2f>> markerCorners;
-    std::vector<vector<cv::Point2f>> rejectedCandidates;
-    aruco::DetectorParameters parameter;
+    std::vector<std::vector<cv::Point2f>> markerCorners;
+    std::vector<std::vector<cv::Point2f>> rejectedCandidates;
+    cv::aruco::DetectorParameters parameter;
 
-    std::vector<Vec3d> rVecs;
-    std::vector<Vec3d> tVecs;
+    std::vector<cv::Vec3d> rVecs;
+    std::vector<cv::Vec3d> tVecs;
     cv::Vec3d origin_rVecs;
     cv::Vec3d origin_tVecs;
 

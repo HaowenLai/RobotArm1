@@ -18,8 +18,11 @@ include_directories(
 
 
 #all source put here
-#set(sqrtFunc ${DIR_SRCS})
+set(mainSrcList 
+    src/main.cpp
+    src/RsVideoCapture.cpp
+    src/ArucoMarker.cpp)
 
-add_executable(main src/main.cpp src/RsVideoCapture.cpp)
+add_executable(main ${mainSrcList})
 
 target_link_libraries(main ${OpenCV_LIBS} realsense2)
