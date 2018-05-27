@@ -29,35 +29,38 @@ int main()
         << 0.156,-0.2792, 0, 0);
 
     Mat img_anc, img_rs;
-    ArucoMarker ancMarkerId9(9, ANC_cameraMatrix, ANC_distCoeffs);
-    ArucoMarker rsMarkerId9(9, RS_cameraMatrix, RS_distCoeffs);
+    ArucoMarker ancMarkerId2(2, ANC_cameraMatrix, ANC_distCoeffs);
+    //ArucoMarker rsMarkerId9(9, RS_cameraMatrix, RS_distCoeffs);
 
     helpMsg();
 
-    VideoCapture camera(3);
-    RsVideoCapture camera_rs;
+    VideoCapture camera(0);
+    camera.set(CV_CAP_PROP_FRAME_WIDTH,1024);
+    camera.set(CV_CAP_PROP_FRAME_HEIGHT,768);
+
+    //RsVideoCapture camera_rs;
     namedWindow("ANC", WINDOW_AUTOSIZE);
-    namedWindow("RS", WINDOW_AUTOSIZE);
+    //namedWindow("RS", WINDOW_AUTOSIZE);
 
     while (1)
     {
         camera >> img_anc;
-        camera_rs >> img_rs;
+        //camera_rs >> img_rs;
 
-        ancMarkerId9.drawBoundaryAndAxis(img_anc);
-        rsMarkerId9.drawBoundaryAndAxis(img_rs);
+        ancMarkerId2.drawBoundaryAndAxis(img_anc);
+        //rsMarkerId9.drawBoundaryAndAxis(img_rs);
 
         imshow("ANC", img_anc);
-        imshow("RS", img_rs);
+        //imshow("RS", img_rs);
 
-        ancMarkerId9.outputOffset(false);
-        rsMarkerId9.outputOffset(false);
+        ancMarkerId2.outputOffset(false);
+        //rsMarkerId9.outputOffset(false);
 
         switch ((char)waitKey(50))
         {
         case 'c':
-            ancMarkerId9.calibrateOrigin();
-            rsMarkerId9.calibrateOrigin();
+            ancMarkerId2.calibrateOrigin();
+            //rsMarkerId9.calibrateOrigin();
             break;
         case 'q':
             return 0;
