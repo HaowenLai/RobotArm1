@@ -24,5 +24,7 @@ set(mainSrcList
     src/ArucoMarker.cpp)
 
 add_executable(main ${mainSrcList})
+add_executable(twoJoints src/twoJoints.cpp)
 
 target_link_libraries(main ${OpenCV_LIBS} realsense2)
+target_link_libraries(twoJoints ${OpenCV_LIBS} m)
