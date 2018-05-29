@@ -61,13 +61,33 @@ void ArucoMarker::drawBoundaryAndAxis(cv::Mat& img)
     }
 }
 
-void ArucoMarker::outputOffset(bool clearLastResult)
+void ArucoMarker::outputOffset(Mat& img, Point&& point)
 {
     if(specificMarkIndex >= 0)
     {
-        if(clearLastResult)
+        char temp[100];
+        sprintf(temp,
+            "tVec offset is: %+4.2f  %+4.2f  %+4.2f "
+            "rVec offset is: %+4.2f  %+4.2f  %+4.2f",
+            tVecs[specificMarkIndex][0] - origin_tVecs[0],
+            tVecs[specificMarkIndex][1] - origin_tVecs[1],
+            tVecs[specificMarkIndex][2] - origin_tVecs[2],
+            rVecs[specificMarkIndex][0] - origin_rVecs[0],
+            rVecs[specificMarkIndex][1] - origin_rVecs[1],
+            rVecs[specificMarkIndex][2] - origin_rVecs[2]);
+
+        //put text test
+        putText(img,temp,point,FONT_HERSHEY_PLAIN,1,Scalar(255,0,0),2);
+    }
+}
+
+void ArucoMarker::outputOffset(bool clearConsole)
+{
+    if(specificMarkIndex >= 0)
+    {
+        if(clearConsole)
             printf("\033[1A\033[K\033[1A\033[K\033[1A\033[K\033[1A\033[K");
-        
+
         cout<<"rVec offset is:\n  "
             << setiosflags(ios::fixed|ios::left) << setprecision(4)
             << setw(12) << rVecs[specificMarkIndex][0] - origin_rVecs[0] 
@@ -78,7 +98,7 @@ void ArucoMarker::outputOffset(bool clearLastResult)
             << setw(12) << tVecs[specificMarkIndex][0] - origin_tVecs[0]
             << setw(12) << tVecs[specificMarkIndex][1] - origin_tVecs[1]
             << setw(12) << tVecs[specificMarkIndex][2] - origin_tVecs[2] <<endl;
-    }
+    }//end if
 }
 //--------------------End definition of class `ArucoMarker`------------------
 

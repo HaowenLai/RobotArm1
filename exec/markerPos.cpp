@@ -49,12 +49,12 @@ int main()
 
         ancMarkerId2.drawBoundaryAndAxis(img_anc);
         //rsMarkerId9.drawBoundaryAndAxis(img_rs);
-
+        
+        ancMarkerId2.outputOffset(img_anc,Point(100,50));
+        //rsMarkerId9.outputOffset(false);
+        
         imshow("ANC", img_anc);
         //imshow("RS", img_rs);
-
-        ancMarkerId2.outputOffset(false);
-        //rsMarkerId9.outputOffset(false);
 
         switch ((char)waitKey(50))
         {

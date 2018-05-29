@@ -22,7 +22,11 @@ class ArucoMarker
                 enum cv::aruco::PREDEFINED_DICTIONARY_NAME dn = cv::aruco::DICT_5X5_50);
     void calibrateOrigin();
     void drawBoundaryAndAxis(cv::Mat& img);
-    void outputOffset(bool clearLastResult = true);
+    
+    void outputOffset(cv::Mat& img,cv::Point&& point); //display on image
+    void outputOffset(bool clearConsole = true);      //display on console
+
+    
 
   private:
     const int specificMarkId;

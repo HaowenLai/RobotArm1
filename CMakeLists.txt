@@ -19,12 +19,13 @@ include_directories(
 
 #all source put here
 set(mainSrcList 
-    src/main.cpp
+    exec/markerPos.cpp
     src/RsVideoCapture.cpp
     src/ArucoMarker.cpp)
 
-add_executable(main ${mainSrcList})
-add_executable(twoJoints src/twoJoints.cpp)
+add_executable(markerPos ${mainSrcList})
+add_executable(twoJoints exec/twoJointsSimu.cpp)
 
-target_link_libraries(main ${OpenCV_LIBS} realsense2)
+target_link_libraries(markerPos ${OpenCV_LIBS} realsense2)
 target_link_libraries(twoJoints ${OpenCV_LIBS} m)
+

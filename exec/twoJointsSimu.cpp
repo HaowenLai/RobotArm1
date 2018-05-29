@@ -1,17 +1,17 @@
 #include <opencv2/opencv.hpp>
+#include <string>
 #include <math.h>
 
 using namespace std;
 using namespace cv;
 
 //const value definition
-const char* WIN_NAME = "windows";
+const string WIN_NAME("windows");
 const float WIDTH = 1024;
 const float HEIGHT= 768;
 const Point2f origin(300,HEIGHT-30);
 const float ARM1 = 200; //arm 1,200 pixels
 const float ARM2 = 200; //arm 2,200 pixels
-
 
 inline void dispCvt2Cal(Point2f& src,Point2f& dst)
 {
