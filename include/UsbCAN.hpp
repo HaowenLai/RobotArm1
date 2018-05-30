@@ -72,4 +72,8 @@ class UsbCAN
     
 };
 
+
+void generateFrame(VCI_CAN_OBJ& canObj,int* data,int dataLen,
+    int id=0,int sendType=0,int externFlag=0,int remoteFlag=0);
+
 #endif

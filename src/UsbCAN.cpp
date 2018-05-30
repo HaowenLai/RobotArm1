@@ -109,6 +109,20 @@ bool UsbCAN::closeDevice()
     else
         return false;
 }
+//END----------------- Definition of class `UsbCAN`------------------
 
 
+void generateFrame(VCI_CAN_OBJ& canObj,int* data,int dataLen,
+    int id,int sendType,int externFlag,int remoteFlag)
+{
+    canObj.ID        = (unsigned int)id;
+    canObj.SendType  = (unsigned int)sendType;
+    canObj.ExternFlag= (unsigned int)externFlag;
+    canObj.RemoteFlag= (unsigned int)remoteFlag;
 
+    canObj.DataLen   = dataLen;
+    for(int i=0;i<dataLen;i++)
+    {
+        canObj.Data[i] = data[i] & 0xff;
+    }
+}

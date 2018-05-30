@@ -1,6 +1,9 @@
 #include "UsbCAN.hpp"
 #include <stdio.h>
+#include <iostream>
+#include <unistd.h>
 
+using namespace std;
 /* ***********************************************
  * CAN communication example
  *   must use `sudo` to run this program, and you 
@@ -10,15 +13,42 @@
 int main()
 {
     UsbCAN canII;
-    VCI_CAN_OBJ can[100];
+    VCI_CAN_OBJ can[10];
 
     if(canII.initCAN(UsbCAN::BAUDRATE_500K))
     {
-        printf("init successfully\n");
+        cout<<"init successfully\n"
+            <<"waiting..."<<endl;
     }
     
-    /*
+
+    //transmit test
+    int step = 3;
+    int pwmValue = 10;
+    while(1)
+    {
+        if(pwmValue > 130 || pwmValue <10)
+            step = -step;
+        
+        pwmValue+=step;
+        generateFrame(*can,&pwmValue,1);
+        canII.transmit(can,1);
+
+        usleep(30*1000);
+        //getchar();
+    }
+
+
+
+   return 0;
+}
+
+
+
+
+/*
     //receive test
+    //add it to the main function
     while(1)
     {
         int count = canII.receive(can,50);
@@ -41,39 +71,4 @@ int main()
             printf("\n\n");
         }
     }
-    */
-
-   
-   
-    //transmit test
-    can[0].SendType = 0;
-    can[0].DataLen = 8;
-    can[0].Data[0] = 31;
-    can[0].Data[1] = 33;
-    can[0].Data[2] = 35;
-    can[0].Data[3] = 37;
-    can[0].Data[4] = 39;
-    can[0].Data[5] = 41;
-    can[0].Data[6] = 43;
-    can[0].Data[7] = 45;
-    can[0].ID = 0x0000;
-    can[0].ExternFlag = 0;
-
-    while(1)
-    {
-        int c;
-        c=canII.transmit(can,1);
-        printf("%d\n",c);
-        getchar();
-    }
-
-
-
-   return 0;
-}
-
-
-
-
-
-
+*/
