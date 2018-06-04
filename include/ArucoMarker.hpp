@@ -2,7 +2,8 @@
  * Head file for ArucoMarker.cpp
  * @description: class to track markers position more easily. 
  * @author : Derek Lai
- * @date   : 2018/5/21
+ * @date   : 2018/6/1
+ * @version: v1.5
  * Copyright(c) All right reserved
 ** ************************************************************/
 
@@ -16,23 +17,23 @@
 class ArucoMarker
 {
   public:
-    ArucoMarker(int watchID,
+    ArucoMarker(std::vector<int>&& watchID,
                 const cv::Mat cameraMat,
                 const cv::Mat distCoeff,
                 enum cv::aruco::PREDEFINED_DICTIONARY_NAME dn = cv::aruco::DICT_5X5_50);
-    void calibrateOrigin();
-    void drawBoundaryAndAxis(cv::Mat& img);
-    
+    void calibrateOrigin(int calibMarkId);
+    void detect(cv::Mat& img);
+   
     void outputOffset(cv::Mat& img,cv::Point&& point); //display on image
     void outputOffset(bool clearConsole = true);      //display on console
 
     
 
   private:
-    const int specificMarkId;
+    const std::vector<int> watchMarkIds;
     const cv::Mat cameraMatrix;
     const cv::Mat distCoeffs;
-    int specificMarkIndex;
+    // int specificMarkIndex;
     
     cv::Ptr<cv::aruco::Dictionary> dict;
     std::vector<int> markerIds;
@@ -44,6 +45,10 @@ class ArucoMarker
     std::vector<cv::Vec3d> tVecs;
     cv::Vec3d origin_rVecs;
     cv::Vec3d origin_tVecs;
+
+  public:
+    std::vector<cv::Vec3d> offset_rVecs;
+    std::vector<cv::Vec3d> offset_tVecs;
 
 };
 

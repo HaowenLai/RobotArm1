@@ -1,46 +1,69 @@
+/* *************************************************************
+ * CAN communication example
+ *   must use `sudo` to run this program, and you should send
+ * 8 byte each frame, or the mini stm32 may display abnormally. 
+ * ************************************************************/
+
 #include "UsbCAN.hpp"
 #include <stdio.h>
 #include <iostream>
 #include <unistd.h>
 
 using namespace std;
-/* ***********************************************
- * CAN communication example
- *   must use `sudo` to run this program, and you 
- * should send 8 byte a frame, or the mini stm32 
- * may display abnormally. 
- * **********************************************/
+
+
+//This function will block the program until it ends
+//It make the robotic arm1 swing forward and backward periodically
+static void swingPeriodically(UsbCAN& canII)
+{
+    //transmit test
+    VCI_CAN_OBJ can;
+    int step = 3;
+    int pwmValue[2] = {10,70};
+    while(1)
+    {
+        if(pwmValue[0] > 130 || pwmValue[0] <10)
+            step = -step;
+        
+        pwmValue[0]+=step;
+        generateFrame(can,pwmValue,2);
+        canII.transmit(&can,1);
+
+        usleep(30*1000);
+    }
+}
+
+//This function will block the program until it ends
+//  It sends data to stm32 via CAN bus to make a single
+//move for the robotic arms.
+static void singleMove(UsbCAN& canII)
+{
+    VCI_CAN_OBJ can;
+    int pwmValue[2] {0};
+    
+    while(1)
+    {
+        cin >> pwmValue[0] >> pwmValue[1];
+        generateFrame(can,pwmValue,2);
+        canII.transmit(&can,1);
+    }
+}
+
+
 int main()
 {
     UsbCAN canII;
-    VCI_CAN_OBJ can[10];
 
     if(canII.initCAN(UsbCAN::BAUDRATE_500K))
     {
         cout<<"init successfully\n"
-            <<"waiting..."<<endl;
-    }
-    
-
-    //transmit test
-    int step = 3;
-    int pwmValue = 10;
-    while(1)
-    {
-        if(pwmValue > 130 || pwmValue <10)
-            step = -step;
-        
-        pwmValue+=step;
-        generateFrame(*can,&pwmValue,1);
-        canII.transmit(can,1);
-
-        usleep(30*1000);
-        //getchar();
+            <<"transmitting..."<<endl;
     }
 
+    // swingPeriodically(canII);
+    // singleMove(canII);
 
-
-   return 0;
+    return 0;
 }
 
 

@@ -5,7 +5,7 @@ using namespace cv;
 using namespace std;
 
 //help message
-inline void helpMsg()
+static inline void helpMsg()
 {
     cout << "help messages for this program\n"
             "key 'c' : to calibrate all markers original positions\n"
@@ -19,48 +19,43 @@ inline void helpMsg()
 int main()
 {
     //camera instrinc matrix and distort coefficients
-    const Mat ANC_cameraMatrix = (Mat_<double>(3, 3) 
-        << 846.82,-0.2796, 328.36, 0, 849.605, 193.144, 0, 0, 1);
-    const Mat ANC_distCoeffs = (Mat_<double>(1, 5)
-        << 0.0699,0.091, -0.0072, 0.0036, -1.5246);
-    const Mat RS_cameraMatrix = (Mat_<double>(3, 3)
-        << 622.60,0, 312.12, 0, 623.37, 235.86, 0, 0, 1);
-    const Mat RS_distCoeffs = (Mat_<double>(1, 4)
-        << 0.156,-0.2792, 0, 0);
+    const Mat M2_cameraMatrix = (Mat_<double>(3, 3) 
+        << 1208.33,0, 303.71, 0, 1209.325, 246.98, 0, 0, 1);
+    const Mat M2_distCoeffs = (Mat_<double>(1, 5)
+        << -0.3711,-4.0299, 0, 0,22.9040);
+    // const Mat RS_cameraMatrix = (Mat_<double>(3, 3)
+    //     << 622.60,0, 312.12, 0, 623.37, 235.86, 0, 0, 1);
+    // const Mat RS_distCoeffs = (Mat_<double>(1, 4)
+    //     << 0.156,-0.2792, 0, 0);
 
-    Mat img_anc, img_rs;
-    ArucoMarker ancMarkerId2(2, ANC_cameraMatrix, ANC_distCoeffs);
-    //ArucoMarker rsMarkerId9(9, RS_cameraMatrix, RS_distCoeffs);
+    Mat img_m2;
+    ArucoMarker m2Marker(vector<int>({7,8,10}), M2_cameraMatrix, M2_distCoeffs);
 
     helpMsg();
 
     VideoCapture camera(0);
-    camera.set(CV_CAP_PROP_FRAME_WIDTH,1024);
-    camera.set(CV_CAP_PROP_FRAME_HEIGHT,768);
+    // camera.set(CV_CAP_PROP_FRAME_WIDTH,1024);
+    // camera.set(CV_CAP_PROP_FRAME_HEIGHT,768);
 
     //RsVideoCapture camera_rs;
-    namedWindow("ANC", WINDOW_AUTOSIZE);
-    //namedWindow("RS", WINDOW_AUTOSIZE);
+
+    namedWindow("M2", WINDOW_AUTOSIZE);
+    // namedWindow("RS", WINDOW_AUTOSIZE);
 
     while (1)
     {
-        camera >> img_anc;
+        camera >> img_m2;
         //camera_rs >> img_rs;
 
-        ancMarkerId2.drawBoundaryAndAxis(img_anc);
-        //rsMarkerId9.drawBoundaryAndAxis(img_rs);
+        m2Marker.detect(img_m2);
+        m2Marker.outputOffset(img_m2,Point(30,30));
         
-        ancMarkerId2.outputOffset(img_anc,Point(100,50));
-        //rsMarkerId9.outputOffset(false);
-        
-        imshow("ANC", img_anc);
-        //imshow("RS", img_rs);
+        imshow("M2", img_m2);
 
         switch ((char)waitKey(50))
         {
         case 'c':
-            ancMarkerId2.calibrateOrigin();
-            //rsMarkerId9.calibrateOrigin();
+            m2Marker.calibrateOrigin(7);
             break;
         case 'q':
             return 0;

@@ -10,6 +10,8 @@
 #ifndef __USBCAN_HPP__
 #define __USBCAN_HPP__
 
+#include <vector>
+
 typedef struct _VCI_CAN_OBJ{
     unsigned int  ID;
     unsigned int TimeStamp;
@@ -74,6 +76,8 @@ class UsbCAN
 
 
 void generateFrame(VCI_CAN_OBJ& canObj,int* data,int dataLen,
+    int id=0,int sendType=0,int externFlag=0,int remoteFlag=0);
+void generateFrame(VCI_CAN_OBJ& canObj,std::vector<int>& data,
     int id=0,int sendType=0,int externFlag=0,int remoteFlag=0);
 
 #endif

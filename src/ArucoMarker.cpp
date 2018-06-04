@@ -11,31 +11,34 @@ using namespace std;
 //-------------------- Definition of class `ArucoMarker`------------------
 //public
 ArucoMarker::ArucoMarker(
-    int watchID,
+    vector<int>&& watchID,
     const cv::Mat cameraMat,
     const cv::Mat distCoeff,
     enum cv::aruco::PREDEFINED_DICTIONARY_NAME dn):
-    specificMarkId(watchID),
+    watchMarkIds(watchID),
     cameraMatrix(cameraMat),
     distCoeffs(distCoeff),
-    specificMarkIndex(-1),
     dict(aruco::getPredefinedDictionary(dn)),
     origin_rVecs(Vec3d(0,0,0)),
     origin_tVecs(Vec3d(0,0,0))
-    
 { }
 
-void ArucoMarker::calibrateOrigin()
+void ArucoMarker::calibrateOrigin(int calibMarkId)
 {
-    if(specificMarkIndex >= 0)
+    for(size_t i=0;i<markerIds.size();i++)
     {
-        origin_rVecs = rVecs[specificMarkIndex];
-        origin_tVecs = tVecs[specificMarkIndex];
+        if(calibMarkId == markerIds[i])
+        {
+            origin_rVecs = rVecs[i];
+            origin_tVecs = tVecs[i];
+            break;
+        }
     }
 }
 
-void ArucoMarker::drawBoundaryAndAxis(cv::Mat& img)
+void ArucoMarker::detect(cv::Mat& img)
 {
+    markerIds.clear();
     aruco::detectMarkers(
         img,dict,
         markerCorners,
@@ -51,56 +54,80 @@ void ArucoMarker::drawBoundaryAndAxis(cv::Mat& img)
         cameraMatrix,
         distCoeffs,
         rVecs,tVecs);
-        
-    specificMarkIndex = -1;
-    for(size_t i = 0;i<markerIds.size();++i)
-    {
-        aruco::drawAxis(img,cameraMatrix,distCoeffs,rVecs[i],tVecs[i],30);
-        if(markerIds[i] == specificMarkId)
-            specificMarkIndex = i;
-    }
 }
+
 
 void ArucoMarker::outputOffset(Mat& img, Point&& point)
 {
-    if(specificMarkIndex >= 0)
+    offset_rVecs.clear();
+    offset_tVecs.clear();
+
+    for(int watchMarkID : watchMarkIds)
     {
+        for(size_t i = 0;i<markerIds.size();i++)
+        {
+            if(watchMarkID == markerIds[i])
+            {
+                offset_rVecs.push_back(rVecs[i] - origin_rVecs);
+                offset_tVecs.push_back(tVecs[i] - origin_tVecs);
+            }
+        }
+    }
+
+    for(size_t i=0;i<offset_tVecs.size();i++)
+    {        
         char temp[100];
         sprintf(temp,
-            "tVec offset is: %+4.2f  %+4.2f  %+4.2f "
-            "rVec offset is: %+4.2f  %+4.2f  %+4.2f",
-            tVecs[specificMarkIndex][0] - origin_tVecs[0],
-            tVecs[specificMarkIndex][1] - origin_tVecs[1],
-            tVecs[specificMarkIndex][2] - origin_tVecs[2],
-            rVecs[specificMarkIndex][0] - origin_rVecs[0],
-            rVecs[specificMarkIndex][1] - origin_rVecs[1],
-            rVecs[specificMarkIndex][2] - origin_rVecs[2]);
+            "tVec offset is: %+4.1f  %+4.1f  %+4.1f "
+            "rVec offset is: %+4.1f  %+4.1f  %+4.1f",
+            offset_tVecs[i][0],offset_tVecs[i][1],offset_tVecs[i][2],
+            offset_rVecs[i][0],offset_rVecs[i][1],offset_rVecs[i][2]);
 
         //put text test
-        putText(img,temp,point,FONT_HERSHEY_PLAIN,1,Scalar(255,0,0),2);
+        putText(img,temp,Point(point.x,point.y+i*20),
+                FONT_HERSHEY_PLAIN,1,Scalar(255,0,0),1);
     }
 }
 
 void ArucoMarker::outputOffset(bool clearConsole)
 {
-    if(specificMarkIndex >= 0)
-    {
-        if(clearConsole)
-            printf("\033[1A\033[K\033[1A\033[K\033[1A\033[K\033[1A\033[K");
+    offset_rVecs.clear();
+    offset_tVecs.clear();
 
-        cout<<"rVec offset is:\n  "
+    for(int watchMarkID : watchMarkIds)
+    {
+        for(size_t i = 0;i<markerIds.size();i++)
+        {
+            if(watchMarkID == markerIds[i])
+            {
+                offset_rVecs.push_back(rVecs[i] - origin_rVecs);
+                offset_tVecs.push_back(tVecs[i] - origin_tVecs);
+            }
+        }
+    }
+
+    if(clearConsole)
+    for(size_t i=0;i<offset_tVecs.size();i++)
+        printf("\033[1A\033[K\033[1A\033[K\033[1A\033[K\033[1A\033[K");
+    
+    for(size_t i=0;i<offset_tVecs.size();i++)
+    {
+        cout<<"No."<< i <<" rVec offset is:\n  "
             << setiosflags(ios::fixed|ios::left) << setprecision(4)
-            << setw(12) << rVecs[specificMarkIndex][0] - origin_rVecs[0] 
-            << setw(12) << rVecs[specificMarkIndex][1] - origin_rVecs[1] 
-            << setw(12) << rVecs[specificMarkIndex][2] - origin_rVecs[2] <<endl;
-        cout<<"tVec offset is:\n  " << setiosflags(ios::left)
+            << setw(12) << offset_rVecs[i][0] 
+            << setw(12) << offset_rVecs[i][1]
+            << setw(12) << offset_rVecs[i][2] <<endl;
+        cout<<"No."<< i <<" tVec offset is:\n  " << setiosflags(ios::left)
             << setiosflags(ios::fixed|ios::left) << setprecision(4)
-            << setw(12) << tVecs[specificMarkIndex][0] - origin_tVecs[0]
-            << setw(12) << tVecs[specificMarkIndex][1] - origin_tVecs[1]
-            << setw(12) << tVecs[specificMarkIndex][2] - origin_tVecs[2] <<endl;
-    }//end if
+            << setw(12) << offset_tVecs[i][0]
+            << setw(12) << offset_tVecs[i][1]
+            << setw(12) << offset_tVecs[i][2] <<endl;
+    }
 }
+
+
 //--------------------End definition of class `ArucoMarker`------------------
+
 
 
 //to generate ArUco markers, just use once
