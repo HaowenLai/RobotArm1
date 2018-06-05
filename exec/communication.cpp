@@ -5,21 +5,67 @@
  * ************************************************************/
 
 #include "UsbCAN.hpp"
+#include "BpNetwork.hpp"
 #include <stdio.h>
 #include <iostream>
 #include <unistd.h>
 
 using namespace std;
+using namespace cv;
+
+//function for testing
+void swingPeriodically(UsbCAN& canII);
+void singleMove(UsbCAN& canII);
+
+
+
+int main()
+{
+    UsbCAN canII;
+    VCI_CAN_OBJ can;
+
+    if(canII.initCAN(UsbCAN::BAUDRATE_500K))
+    {
+        cout<<"init successfully\n"
+            <<"transmitting..."<<endl;
+    }
+
+    //single move test
+    while(1)
+    {
+        singleMove(canII);
+    }
+
+    //reproject test
+    // BpNetwork network(6);
+    // network.loadParams("../data/network_data.txt",16*20);
+    // Vec3d input;
+
+    // while(1)
+    // {
+    //     cin >> input[0] >> input[1] >> input[2];
+    //     Mat output = network.predict(input);
+    //     vector<int> pwmValue{
+    //         (int)output.at<double>(0),
+    //         (int)output.at<double>(1)};
+    //     cout<<"calculate:"<<output<<endl;
+        
+    //     generateFrame(can,pwmValue);
+    //     canII.transmit(&can,1);
+    // }
+
+    return 0;
+}
 
 
 //This function will block the program until it ends
 //It make the robotic arm1 swing forward and backward periodically
-static void swingPeriodically(UsbCAN& canII)
+void swingPeriodically(UsbCAN& canII)
 {
     //transmit test
     VCI_CAN_OBJ can;
     int step = 3;
-    int pwmValue[2] = {10,70};
+    int pwmValue[2] {10,70};
     while(1)
     {
         if(pwmValue[0] > 130 || pwmValue[0] <10)
@@ -33,41 +79,17 @@ static void swingPeriodically(UsbCAN& canII)
     }
 }
 
-//This function will block the program until it ends
 //  It sends data to stm32 via CAN bus to make a single
 //move for the robotic arms.
-static void singleMove(UsbCAN& canII)
+void singleMove(UsbCAN& canII)
 {
     VCI_CAN_OBJ can;
     int pwmValue[2] {0};
     
-    while(1)
-    {
-        cin >> pwmValue[0] >> pwmValue[1];
-        generateFrame(can,pwmValue,2);
-        canII.transmit(&can,1);
-    }
+    cin >> pwmValue[0] >> pwmValue[1];
+    generateFrame(can,pwmValue,2);
+    canII.transmit(&can,1);
 }
-
-
-int main()
-{
-    UsbCAN canII;
-
-    if(canII.initCAN(UsbCAN::BAUDRATE_500K))
-    {
-        cout<<"init successfully\n"
-            <<"transmitting..."<<endl;
-    }
-
-    // swingPeriodically(canII);
-    // singleMove(canII);
-
-    return 0;
-}
-
-
-
 
 /*
     //receive test

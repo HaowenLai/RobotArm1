@@ -41,7 +41,7 @@ int main()
 {
     //file writer
     ofstream fout;
-    fout.open("/home/savage/data/roboticArm/data.txt",ios::out|ios::app);
+    fout.open("/home/savage/data/roboticArm/data1.txt",ios::out|ios::app);
 
     //marker define
     const Mat M2_cameraMat = (Mat_<double>(3, 3) 
