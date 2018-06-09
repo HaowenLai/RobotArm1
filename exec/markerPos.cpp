@@ -1,5 +1,6 @@
 #include "RsVideoCapture.hpp"
 #include "ArucoMarker.hpp"
+#include <time.h>
 
 using namespace cv;
 using namespace std;
@@ -15,6 +16,28 @@ static inline void helpMsg()
     printf("\n\n\n\n\n");
 }
 
+void take_photo(Mat& img)
+{
+	const string photo_path = "../data/";
+    // get system time as file name..
+	time_t tt;
+	time(&tt);
+	tt += 8*3600;   //transform the time zone
+	tm *t = gmtime(&tt);
+	char timeBuff[30];
+	sprintf(timeBuff,"%d-%02d-%02d %02d:%02d:%02d",
+	        t->tm_year +1900,
+	        t->tm_mon+1,
+	        t->tm_mday,
+	        t->tm_hour,
+	        t->tm_min,
+	        t->tm_sec);
+	
+	string img_path = photo_path + timeBuff + ".jpg";
+	imwrite(img_path,img);
+}
+
+
 //detect ArUco markers and estimate pose
 int main()
 {
@@ -29,7 +52,7 @@ int main()
     //     << 0.156,-0.2792, 0, 0);
 
     Mat img_m2;
-    ArucoMarker m2Marker(vector<int>({7,8,10}), M2_cameraMatrix, M2_distCoeffs);
+    ArucoMarker m2Marker(vector<int>({6,7,10}), M2_cameraMatrix, M2_distCoeffs);
 
     helpMsg();
 
@@ -46,7 +69,6 @@ int main()
     {
         camera >> img_m2;
         //camera_rs >> img_rs;
-
         m2Marker.detect(img_m2);
         m2Marker.outputOffset(img_m2,Point(30,30));
         
@@ -54,12 +76,15 @@ int main()
 
         switch ((char)waitKey(50))
         {
-        case 'c':
+          case 'c':
             m2Marker.calibrateOrigin(7);
             break;
-        case 'q':
+          case 'q':
             return 0;
-        default:
+          case 't':
+            take_photo(img_m2);
+            break;
+          default:
             break;
         }
     }

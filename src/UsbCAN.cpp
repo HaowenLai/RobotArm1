@@ -132,9 +132,9 @@ void generateFrame(VCI_CAN_OBJ& canObj,std::vector<int>& data,
 {
     canObj.ID        = (unsigned int)id;
     canObj.SendType  = (unsigned int)sendType;
-    canObj.ExternFlag= (unsigned int)externFlag;
-    canObj.RemoteFlag= (unsigned int)remoteFlag;
-    canObj.DataLen   = (unsigned int)data.size();
+    canObj.ExternFlag= (unsigned char)externFlag;
+    canObj.RemoteFlag= (unsigned char)remoteFlag;
+    canObj.DataLen   = (unsigned char)data.size();
 
     int i=0;
     for(int x:data)

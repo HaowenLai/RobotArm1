@@ -1,7 +1,9 @@
-/* ******************************************************
-* This is the definition for class `BpNetwork`
-* It can read the weights and bias calculated by Matlab.
-* ******************************************************/
+/* *********************************************************
+*   This is the definition for classs related to `BpNetwork`
+*   It provides interface classes for networks calculated
+* or built by Matlab and Python(tensorflow), namely 
+* `MatlabNetwork` and `PyNetwork`
+* *********************************************************/
 
 #include "BpNetwork.hpp"
 #include <fstream>
@@ -10,12 +12,12 @@
 using namespace std;
 using namespace cv;
 
-//-----------------------Class `BpNetwork` -------------------------
+//---------------------Class `MatlabNetwork` -------------------------
 //public
-BpNetwork::BpNetwork(int layerNumer):layerNum(layerNumer)
+MatlabNetwork::MatlabNetwork(int layerNumer):layerNum(layerNumer)
 { }
 
-void BpNetwork::loadParams(std::string filename, int maxElementNum)
+void MatlabNetwork::loadParams(std::string filename, int maxElementNum)
 {
     ifstream fin(filename);
     double* buff = new double[maxElementNum];
@@ -66,7 +68,7 @@ void BpNetwork::loadParams(std::string filename, int maxElementNum)
 
 
 //private
-cv::Mat BpNetwork::cvtInputType(const Vdouble& in)
+cv::Mat MatlabNetwork::cvtInputType(const Vdouble& in)
 {
     Mat input(in.size(), 1, CV_64FC1);
 
@@ -80,7 +82,7 @@ cv::Mat BpNetwork::cvtInputType(const Vdouble& in)
     return input;
 }
 
-cv::Mat BpNetwork::cvtInputType(const Vec3d& in)
+cv::Mat MatlabNetwork::cvtInputType(const Vec3d& in)
 {
     Mat input(3, 1, CV_64FC1);
 
@@ -91,9 +93,7 @@ cv::Mat BpNetwork::cvtInputType(const Vec3d& in)
     return input;
 }
 
-
-
-void BpNetwork::tansig(Mat& x)
+void MatlabNetwork::tansig(Mat& x)
 {
     auto it = x.begin<double>();
     auto itend = x.end<double>();
@@ -105,5 +105,76 @@ void BpNetwork::tansig(Mat& x)
     }
 }
 
-//--------------------end of Class `BpNetwork` -----------------------
+//--------------------end of Class `MatlabNetwork` -------------------
 
+
+
+//-------------------------Class `PyNetwork` -------------------------
+//public
+TfNetwork::TfNetwork(string path,string moduleName,string funcName)
+{
+    Py_Initialize();
+    if (!Py_IsInitialized()) 
+        printf("initialize failed.\n");
+    
+    wchar_t* meaningless = NULL;
+    wchar_t** meaningless1 = &meaningless;
+    PySys_SetArgv(0, meaningless1);
+    PyRun_SimpleString("import sys");
+    
+    path = "sys.path.append('" + path + "')";
+    PyRun_SimpleString(path.c_str());
+    
+    //载入名为pyModuleName的脚本  
+    pModule = PyImport_ImportModule(moduleName.c_str());
+    if ( !pModule ||PyErr_Occurred()) 
+    {
+        printf("can't find py module");
+        PyErr_Print();
+    }
+
+    //load all functions in the pModule
+    pDict = PyModule_GetDict(pModule);  
+    if ( !pDict )
+    {
+        printf("can't find the function dict");
+    }
+
+    // 找出函数名为main的函数
+    pFunc = PyDict_GetItemString(pDict, funcName.c_str());
+    if ( !pFunc || !PyCallable_Check(pFunc) )
+    {
+        printf("can't find function `main`");
+    }
+}
+
+TfNetwork::~TfNetwork()
+{
+    Py_CLEAR(pModule);
+    Py_CLEAR(pDict);
+    Py_CLEAR(pFunc);
+    Py_Finalize();
+}
+
+
+void TfNetwork::callFunction(std::vector<double>& input,
+                             std::vector<double>& output)
+{
+    while(output.size()<2)
+        output.push_back(0.);
+    
+    pArgs  = PyTuple_New(1);
+    pListXdata = Py_BuildValue("[d,d]",input[0],input[1]);
+    PyTuple_SetItem(pArgs, 0, pListXdata);
+
+    pRetVal = PyEval_CallObject(pFunc, pArgs);      //这里开始执行py脚本
+    PyArg_ParseTuple(pRetVal, "dd", &output[0],&output[1]); //py脚本返回值给iRetVal
+
+    Py_CLEAR(pArgs);
+    Py_CLEAR(pListXdata);
+    Py_CLEAR(pRetVal);
+}
+
+
+
+//--------------------end of Class `PyNetwork` -----------------------

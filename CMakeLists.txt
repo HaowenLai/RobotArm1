@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 3.2)
 project(RoboticArm)
 
 find_package(OpenCV REQUIRED)
+find_package(PythonLibs REQUIRED)
 
 #use c++ 11
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
@@ -15,6 +16,7 @@ include_directories(
  include
  /opt/ros/kinetic/include/opencv-3.3.1-dev
  /usr/local/include
+ ${PYTHON_INCLUDE_PATH}
 )
 
 
@@ -42,5 +44,5 @@ add_executable(dataCollect ${dataCollectSrcList})
 
 target_link_libraries(markerPos ${OpenCV_LIBS} realsense2)
 target_link_libraries(twoJoints ${OpenCV_LIBS} m)
-target_link_libraries(commu ${OpenCV_LIBS} usbcan)
+target_link_libraries(commu ${OpenCV_LIBS} ${PYTHON_LIBRARIES} usbcan)
 target_link_libraries(dataCollect ${OpenCV_LIBS} usbcan)

@@ -1,10 +1,13 @@
-/* ******************************************************
- * This is a class for bp network.
- * It can read the weights and bias calculated by Matlab.
+/* ********************************************************
+ * These are classes for bp network.
+ *   It provides interface classes for networks calculated
+ * or built by Matlab and Python(tensorflow), namely 
+ * `MatlabNetwork` and `PyNetwork`
  * @Author : Derek Lai
- * @Date   : 2018/6/5
- * @Version: v1.3
- * ******************************************************/
+ * @Date   : 2018/6/8
+ * @Version: v2.0
+ * Copyright(c) All right reserved
+ * ********************************************************/
 
 #ifndef __BPNETWORK_HPP__
 #define __BPNETWORK_HPP__
@@ -12,10 +15,11 @@
 #include <string>
 #include <vector>
 #include <opencv2/opencv.hpp>
+#include <Python.h>
 
-class BpNetwork
+class MatlabNetwork
 {
-private:
+  private:
     typedef std::vector<int>                Vint;
     typedef std::vector<Vint>               VVint;
     typedef std::vector<double>             Vdouble;
@@ -23,8 +27,8 @@ private:
     typedef std::vector<cv::Mat>            VMat;
     
 
-public:
-    BpNetwork(int layerNumer);
+  public:
+    MatlabNetwork(int layerNumer);
 
     //@The format for data file should be:
     //rows1(3)  cols1(3)
@@ -39,7 +43,7 @@ public:
     cv::Mat predict(const inputType& input);
 
 
-private:  
+  private:  
     cv::Mat cvtInputType(const Vdouble& in);
     cv::Mat cvtInputType(const cv::Vec3d& in);
     void tansig(cv::Mat& x);
@@ -54,7 +58,7 @@ private:
 
 //definition of template function `BpNetwork::predict`
 template<typename inputType>
-cv::Mat BpNetwork::predict(const inputType& input)
+cv::Mat MatlabNetwork::predict(const inputType& input)
 {
     cv::Mat output = cvtInputType(input);
 
@@ -75,6 +79,29 @@ cv::Mat BpNetwork::predict(const inputType& input)
     
     return output;
 }
+
+
+
+class TfNetwork
+{
+ public:
+    TfNetwork(std::string path,
+              std::string moduleName,
+              std::string funcName);
+    ~TfNetwork();
+    
+    //input and output can be the same variable
+    void callFunction(std::vector<double>& input,
+                      std::vector<double>& output);
+
+  private:
+    PyObject* pModule;      //module obj
+    PyObject* pDict;        //fuction dict obj
+    PyObject* pFunc;        //target function
+    PyObject* pArgs;        //target function argument
+    PyObject* pRetVal;      //return value
+    PyObject* pListXdata;   //X_data in List type
+};
 
 
 #endif

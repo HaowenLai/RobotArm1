@@ -41,7 +41,7 @@ int main()
 {
     //file writer
     ofstream fout;
-    fout.open("/home/savage/data/roboticArm/data1.txt",ios::out|ios::app);
+    fout.open("/home/savage/data/roboticArm/data2.txt",ios::out|ios::app);
 
     //marker define
     const Mat M2_cameraMat = (Mat_<double>(3, 3) 
@@ -64,8 +64,8 @@ int main()
     }
 
     //generate random number
-    vector<int> DutyNow = {0,80};
-    vector<int> DutyDst = {0,80};
+    vector<int> DutyNow = {20,80,80,85};
+    vector<int> DutyDst = {20,80};
     RNG rng(time(NULL));
 
     while(1)
@@ -75,7 +75,7 @@ int main()
 
         //limit the angles
         int sum = 0;
-        for(int x:DutyDst)
+        for(auto x:DutyDst)
             sum+=x;
         if(sum>200 || sum<80)
             continue;
@@ -110,13 +110,13 @@ int main()
 
                 if(m2Marker.offset_tVecs.size() == 3)
                 {
-                    fout << DutyNow[0] << "," << DutyNow[1];
+                    fout << DutyNow[0] << "," << DutyNow[1] ;
                     for(auto& offset: m2Marker.offset_tVecs)
                     {
-                        fout << ",("
+                        fout << ","
                              << offset[0] << ","
                              << offset[1] << ","
-                             << offset[2] << ")";
+                             << offset[2] ;
                     }
                     fout << endl;
                     break;
