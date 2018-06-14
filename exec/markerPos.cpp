@@ -10,6 +10,7 @@ static inline void helpMsg()
 {
     cout << "help messages for this program\n"
             "key 'c' : to calibrate all markers original positions\n"
+            "key 't' : take photo\n"
             "key 'q' : quit the program\n"
             "\n---press <Enter> to continue---";
     cin.get();
@@ -52,7 +53,7 @@ int main()
     //     << 0.156,-0.2792, 0, 0);
 
     Mat img_m2;
-    ArucoMarker m2Marker(vector<int>({6,7,10}), M2_cameraMatrix, M2_distCoeffs);
+    ArucoMarker m2Marker(vector<int>({5,6,8}), M2_cameraMatrix, M2_distCoeffs);
 
     helpMsg();
 

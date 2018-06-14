@@ -2,14 +2,16 @@
 import tensorflow as tf
 import numpy as np
 
-save_file = '/home/savage/workspace/cpp_ws/Aruco-marker/data/model.ckpt-300000'
+save_file = '/home/savage/workspace/cpp_ws/Aruco-marker/data/model.ckpt-48000'
 inNum  = 2
 outNum = 2
 
-def addLayer(inputData,inSize,outSize,activity_function = None):
+def addLayer(inputData,inSize,outSize,kp,activity_function = None):
     Weights = tf.Variable(tf.truncated_normal([inSize,outSize],stddev=0.1))
     basis = tf.Variable(tf.zeros([1,outSize]))
     weights_plus_b = tf.matmul(inputData,Weights)+basis
+    #add dropout here
+    weights_plus_b = tf.nn.dropout(weights_plus_b,kp)
     if activity_function is None:
         ans = weights_plus_b
     else:
@@ -17,11 +19,16 @@ def addLayer(inputData,inSize,outSize,activity_function = None):
     return ans
 
 xs = tf.placeholder(tf.float32,[None,inNum])
+keep_prob = tf.placeholder(tf.float32)
 
-l1 = addLayer(xs,inNum,20,activity_function=tf.nn.relu)
-l2 = addLayer(l1,20,20,activity_function=tf.nn.relu)
-l3 = addLayer(l2,20,10,activity_function=tf.nn.relu)
-l4 = addLayer(l3,10,outNum,activity_function=None)
+l1 = addLayer(xs,inNum,16,keep_prob,activity_function=tf.nn.relu)
+l2 = addLayer(l1,16,16,keep_prob,activity_function=tf.nn.relu)
+l3 = addLayer(l2,16,16,keep_prob,activity_function=tf.nn.relu)
+l3 = addLayer(l3,16,16,keep_prob,activity_function=tf.nn.relu)
+l3 = addLayer(l3,16,16,keep_prob,activity_function=tf.nn.relu)
+l3 = addLayer(l3,16,16,keep_prob,activity_function=tf.nn.relu)
+l3 = addLayer(l3,16,16,keep_prob,activity_function=tf.nn.relu)
+l4 = addLayer(l3,16,2,keep_prob,activity_function=None)
 l5 = tf.round(l4)
 
 init = tf.global_variables_initializer()
@@ -35,7 +42,7 @@ saver.restore(sess, save_file)
 def main(coordinate):
     print('enter main successfully')
     coordinate = [coordinate]
-    motor_value = sess.run(l5,feed_dict={xs:coordinate})
+    motor_value = sess.run(l5,feed_dict={xs:coordinate,keep_prob:1})
     
     result = tuple(motor_value[0])
     

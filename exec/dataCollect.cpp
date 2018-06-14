@@ -5,127 +5,166 @@
  * of data is then collected and be written to a file as dataset
  * for deep learning training.
  * @Author : Derek Lai
- * @date   : 2018/5/30
- * @version: v1.1
+ * @date   : 2018/6/13
+ * @version: v2.0
  * *************************************************************/
 
 #include "ArucoMarker.hpp"
+#include "control.hpp"
 #include "UsbCAN.hpp"
 
 #include <unistd.h>
+#include <pthread.h>
 #include <ctime>
 #include <fstream>
 
 using namespace std;
 using namespace cv;
 
-#define RANGE_MIN 0
-#define RANGE_MAX 150
+#define MOTOR2_MIN 50
+#define MOTOR2_MAX 119
+#define MOTOR3_MIN 110
+#define MOTOR3_MAX 165
+#define MOTOR5_MIN 196
+#define MOTOR5_MAX 255
+
+bool gDangerFlag = false;
+bool gRecordFlag = false;
 
 
-static void PidControl(vector<int>& now, vector<int>& dst)
-{
-    const float Kp = 0.5;
-    for(size_t i=0;i<dst.size();i++)
-    {
-        int error = Kp*(dst[i]-now[i]);
-        if(error>5)
-            error = 5;
-        else if(error<-5)
-            error = -5;
-        now[i] += error;
-    }
-}
-
-int main()
+void* camera_thread(void* data)
 {
     //file writer
     ofstream fout;
-    fout.open("/home/savage/data/roboticArm/data2.txt",ios::out|ios::app);
-
+    fout.open("/home/savage/data/roboticArm/data4.txt",ios::out|ios::app);
+    
     //marker define
     const Mat M2_cameraMat = (Mat_<double>(3, 3) 
         << 1208.33,0, 303.71, 0, 1209.325, 246.98, 0, 0, 1);
     const Mat M2_distCoeffs = (Mat_<double>(1, 5)
         << -0.3711,-4.0299, 0, 0,22.9040);
-    Mat img;
-    ArucoMarker m2Marker(vector<int>({7,8,10}), M2_cameraMat, M2_distCoeffs);
     //
+    Mat img;
+    ArucoMarker m2Marker(vector<int>({5,8}), M2_cameraMat, M2_distCoeffs);
     VideoCapture camera(0);
     namedWindow("M2", WINDOW_AUTOSIZE);
     
+    vector<int>* pwmDuty = (vector<int>*)data;
+    
+    while(1)
+    {
+        camera >> img;
+        m2Marker.detect(img);
+        if(m2Marker.offset_tVecs.size()==2 && m2Marker.offset_tVecs[1][1]>120.0)
+        {
+            gDangerFlag = true;
+            for(int i=0;i<10;i++)
+            {
+                camera >> img;
+                imshow("M2",img);
+                waitKey(20);
+            }
+        }
+        imshow("M2",img);
+        waitKey(20);
 
+        //try reading coordinates for at most `maxCount`
+        for(int maxCount=0;gRecordFlag && maxCount<10;maxCount++)
+        {
+            camera >> img;
+            m2Marker.detect(img);
+            m2Marker.outputOffset(img,Point(30,30));
+            imshow("M2", img);
+            waitKey(20);
+            //write data to file
+            if(m2Marker.offset_tVecs.size() == 2)
+            {
+                fout << (*pwmDuty)[1] << "," 
+                     << (*pwmDuty)[2] << ","
+                     << (*pwmDuty)[4];
+                for(auto& offset: m2Marker.offset_tVecs)
+                {
+                    fout << ","
+                        << offset[0] << ","
+                        << offset[1] << ","
+                        << offset[2] ;
+                }
+                fout << endl;
+                break;
+            }
+        }//end for
+        gRecordFlag = false;
+    
+    }//end while(1)
+
+    pthread_exit(0);
+}
+
+
+int main()
+{
     //CAN init
     UsbCAN canII;
-    VCI_CAN_OBJ canFrame;
     if(canII.initCAN(UsbCAN::BAUDRATE_500K))
     {
         cout<<"usbCAN init successfully"<<endl;
     }
 
+    //Arm1 init
+    vector<int> oldValue1 {127,250,50,125,235,170,128};
+    vector<int> newValue1 {127,250,50,125,235,170,128};
+    fixStepMove(oldValue1,newValue1,canII,1);
+
     //generate random number
-    vector<int> DutyNow = {20,80,80,85};
-    vector<int> DutyDst = {20,80};
     RNG rng(time(NULL));
 
+    //create camera thread
+    pthread_t cameraThread;
+    pthread_create(&cameraThread,NULL,camera_thread,&oldValue1);
+
+    cout << "---get ready and press <enter>---" << endl;
+    cin.get();
+    
     while(1)
     {
-        DutyDst[0]=rng.uniform(RANGE_MIN,RANGE_MAX);
-        DutyDst[1]=rng.uniform(RANGE_MIN,RANGE_MAX);
+        newValue1[1]=rng.uniform(MOTOR2_MIN,MOTOR2_MAX);
+        newValue1[2]=rng.uniform(MOTOR3_MIN,MOTOR3_MAX);
+        newValue1[4]=rng.uniform(MOTOR5_MIN,MOTOR5_MAX);
 
-        //limit the angles
-        int sum = 0;
-        for(auto x:DutyDst)
-            sum+=x;
-        if(sum>200 || sum<80)
-            continue;
-        cout<<DutyDst[0]<<" "<<DutyDst[1]<<endl;
+        cout<<newValue1[1]<<" "<<newValue1[2]<<" "<<newValue1[4]<<endl;
 
-        //control until error is small enough
-        while(abs(DutyDst[0]-DutyNow[0])>2 ||
-              abs(DutyDst[1]-DutyNow[1])>2)
+        //move the arm
+        while(!gDangerFlag)
         {
-            PidControl(DutyNow,DutyDst);
-            generateFrame(canFrame,DutyNow);
-            canII.transmit(&canFrame,1);
-            cout<<DutyNow[0]<<" "<<DutyNow[1]<<endl;
-            
-            //read steady-state image,0.5s
-            for(int i=0;i<15;i++)
+            size_t satisfiedNum = 0;
+            for(size_t i=0;i<oldValue1.size();i++)
             {
-                camera >> img;
-                // m2Marker.detect(img);
-                //m2Marker.outputOffset(img,Point(30,30));
-                imshow("M2", img);
-                waitKey(30);
+                if(newValue1[i]-oldValue1[i] >= 1)
+                    oldValue1[i] += 1;
+                else if(newValue1[i]-oldValue1[i] <= -1)
+                    oldValue1[i] += -1;
+                else
+                    satisfiedNum++;
             }
 
-            for(int maxCount=0;maxCount<10;maxCount++)
+            VCI_CAN_OBJ can;
+            generateFrame(can,oldValue1,1);
+            canII.transmit(&can,1);
+
+            if(satisfiedNum == oldValue1.size())
             {
-                camera >> img;
-                m2Marker.detect(img);
-                m2Marker.outputOffset(img,Point(30,30));
-                imshow("M2", img);
-                waitKey(30);
-
-                if(m2Marker.offset_tVecs.size() == 3)
-                {
-                    fout << DutyNow[0] << "," << DutyNow[1] ;
-                    for(auto& offset: m2Marker.offset_tVecs)
-                    {
-                        fout << ","
-                             << offset[0] << ","
-                             << offset[1] << ","
-                             << offset[2] ;
-                    }
-                    fout << endl;
-                    break;
-                }
-            }//end while
-
-        }//end while
-        //cin.get();
-    }
+                usleep(500*1000);   //let it calm down
+                gRecordFlag = true;
+                break;
+            }
+            usleep(10*1000);
+        }//end while(!gDangerFlag), move arm
+        
+        gDangerFlag = false;
+        while(gRecordFlag)
+            usleep(10*1000);; //wait until data is recorded
+            
+    }//end while(1)
 
     return 0;
 }

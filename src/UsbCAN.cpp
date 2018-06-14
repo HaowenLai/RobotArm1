@@ -123,7 +123,12 @@ void generateFrame(VCI_CAN_OBJ& canObj,int* data,int dataLen,
     canObj.DataLen   = (unsigned char)dataLen;
     for(int i=0;i<dataLen;i++)
     {
-        canObj.Data[i] = data[i] & 0xff;
+        if(data[i]>255)
+            canObj.Data[i] = 255;
+        else if(data[i]<0)
+            canObj.Data[i] = 0;
+        else
+            canObj.Data[i] = data[i] & 0xff;
     }
 }
 
@@ -139,7 +144,13 @@ void generateFrame(VCI_CAN_OBJ& canObj,std::vector<int>& data,
     int i=0;
     for(int x:data)
     {
-        canObj.Data[i] = x & 0xff;
+        if(x>255)
+            canObj.Data[i] = 255;
+        else if(x<0)
+            canObj.Data[i] = 0;
+        else
+            canObj.Data[i] = x & 0xff;
+        
         i++;
     }
 }
