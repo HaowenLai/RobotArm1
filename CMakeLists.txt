@@ -53,6 +53,6 @@ add_executable(manipulate ${manipulateSrcList})
 
 target_link_libraries(markerPos ${OpenCV_LIBS} realsense2)
 target_link_libraries(twoJoints ${OpenCV_LIBS} m)
-target_link_libraries(commu ${OpenCV_LIBS} ${PYTHON_LIBRARIES} usbcan)
+target_link_libraries(commu ${OpenCV_LIBS} ${PYTHON_LIBRARIES} usbcan pthread)
 target_link_libraries(dataCollect ${OpenCV_LIBS} usbcan pthread)
 target_link_libraries(manipulate ${OpenCV_LIBS} usbcan)

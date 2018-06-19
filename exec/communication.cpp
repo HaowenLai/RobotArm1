@@ -11,6 +11,8 @@
 #include "BpNetwork.hpp"
 #include "ArucoMarker.hpp"
 #include "control.hpp"
+
+#include <pthread.h>
 #include <stdio.h>
 #include <iostream>
 
@@ -209,9 +211,58 @@ void tfPredict(UsbCAN& canII)
     }
 }
 
+
+//camera instrinc matrix and distort coefficients
+const Mat M2_cameraMatrix0 = (Mat_<double>(3, 3) 
+    << 1208.33,0, 303.71, 0, 1209.325, 246.98, 0, 0, 1);
+const Mat M2_distCoeffs0 = (Mat_<double>(1, 5)
+    << -0.3711,-4.0299, 0, 0,22.9040);
+const Mat M2_cameraMatrix1 = (Mat_<double>(3, 3) 
+    << 926.64,0, 327.76, 0, 926.499, 246.74, 0, 0, 1);
+const Mat M2_distCoeffs1 = (Mat_<double>(1, 5)
+    << -0.4176,0.1635, 0, 0);
+ArucoMarker m2Marker0(vector<int>({6,8}), M2_cameraMatrix0, M2_distCoeffs0);
+ArucoMarker m2Marker1(vector<int>({4}), M2_cameraMatrix1, M2_distCoeffs1);
+
+//camera thread for func `moveInRoute`
+static void* camera_thread(void* data)
+{
+    // auto& m2Marker = *(ArucoMarker*) data;
+    Mat img0, img1;
+    VideoCapture camera0(0);
+    VideoCapture camera1(1);
+    namedWindow("view_front", WINDOW_AUTOSIZE);
+    namedWindow("view_up", WINDOW_AUTOSIZE);
+    
+    while((char)waitKey(20) != 'q')
+    {
+        camera0 >> img0;
+        camera1 >> img1;
+        m2Marker0.detect(img0);
+        m2Marker0.outputOffset(img0,Point(30,30));
+        m2Marker1.detect(img1);
+        m2Marker1.outputOffset(img1,Point(30,30));
+        imshow("view_front",img0);
+        imshow("view_up",img1);
+    }
+
+    pthread_exit(0);
+}
+
 //move along a certain route
 void moveInRoute(UsbCAN& canII)
 {
+
+    //create camera thread
+    pthread_t cameraThread;
+    pthread_create(&cameraThread, NULL, camera_thread, NULL);
+
+    //Arm1 initialize
+    vector<int> pwmValue1 {127,255,50,125,235,165,100};
+    vector<int> newValue1 {127,255,50,125,235,165,100};
+    fixStepMove(pwmValue1,newValue1,canII,1);
+    cin.get();cin.get();
+
     //! Network parameter
     string modulePath = "/home/savage/workspace/cpp_ws/Aruco-marker/src";
     string moduleName = "tf_network";
@@ -220,74 +271,60 @@ void moveInRoute(UsbCAN& canII)
     vector<double> inout{0.,0.};
     TfNetwork network(modulePath,moduleName,funcName);
 
-    //Arm1 initialize
-    vector<int> pwmValue1 {127,255,50,125,235,170,100};
-    vector<int> newValue1 {127,255,50,125,235,170,100};
-    fixStepMove(pwmValue1,newValue1,canII,1);
-
-    //camera instrinc matrix and distort coefficients
-    const Mat M2_cameraMatrix = (Mat_<double>(3, 3) 
-        << 1208.33,0, 303.71, 0, 1209.325, 246.98, 0, 0, 1);
-    const Mat M2_distCoeffs = (Mat_<double>(1, 5)
-        << -0.3711,-4.0299, 0, 0,22.9040);
-
-    Mat img;
-    ArucoMarker m2Marker(vector<int>({5,6,8}), M2_cameraMatrix, M2_distCoeffs);
-
-    VideoCapture camera(0);
-    namedWindow("view", WINDOW_AUTOSIZE);
-    
     //get target position
+    const int diff5_8 = 95; //height difference between #5 and #8
+    float targetAngle;
     Vec3d targetPos;
     cout<<"start to get target position...\n";
-    while(1)
+    while(true)
     {
-        camera >> img;
-        m2Marker.detect(img);
-        m2Marker.outputOffset(img,Point(30,30));
-        imshow("view",img);
-        waitKey(20);
-
-        if(m2Marker.offset_tVecs.size()==3)
+        if(m2Marker0.index(6) != -1 && m2Marker1.index(4)!=-1)
         {
-            targetPos = m2Marker.offset_tVecs[1];
+            targetAngle = m2Marker1.angle(m2Marker1.index(4));
+            targetPos = m2Marker0.offset_tVecs[m2Marker0.index(6)];
             cout<<"target position got ~\n";
             break;
         }
     }
 
-    //move arm1 to target position
+    //30 units above the target
     inout[0] = targetPos[0];
-    inout[1] = targetPos[1]-95; //#8 is 86 units above target
-
+    inout[1] = targetPos[1]-diff5_8-20;
     network.callFunction(inout,inout);
     newValue1[1] = (int)inout[0];
     newValue1[2] = (int)inout[1];
-    
+    fixStepMove(pwmValue1,newValue1,canII,1);
+    //
+    //adjust motor 6
+    newValue1[5] = 165 - targetAngle * 91.0828;
+    fixStepMove(pwmValue1,newValue1,canII,1);
+
+    //move arm1 to target position
+    inout[0] = targetPos[0];
+    inout[1] = targetPos[1]-diff5_8; //#5 is 95 units above target
+    network.callFunction(inout,inout);
+    newValue1[1] = (int)inout[0];
+    newValue1[2] = (int)inout[1];
+    //
     cout<<"calculated motor value:"<<newValue1[1]<<"  "<<newValue1[2]<<endl;
     cout<<"start to move arm roughly...\n";
     fixStepMove(pwmValue1,newValue1,canII,1);
     cout<<"finish moving arm roughly...\n";
 
-    //adjust #5 to vertical direction
-    cout<<"start to adjust #5...\n";
-    const double epsilon = 3;
-    while(1)
+    //adjust #8 to vertical direction
+    cout<<"start to adjust #8...\n";
+    const double epsilon = 2;
+    while(true)
     {
-        camera >> img;
-        m2Marker.detect(img);
-        m2Marker.outputOffset(img,Point(30,30));
-        imshow("view",img);
-        waitKey(20);
-
-        if(m2Marker.offset_tVecs.size()==2)
+        auto index8 = m2Marker0.index(8);
+        if(index8 != -1 && m2Marker0.isNewFrame())
         {
-            if(m2Marker.offset_tVecs[1][0] - targetPos[0] > epsilon)
+            if(m2Marker0.offset_tVecs[index8][0] - targetPos[0] > epsilon)
             {
                 newValue1[4] += 1;
                 fixStepMove(pwmValue1,newValue1,canII,1);
             }
-            else if(m2Marker.offset_tVecs[1][0] - targetPos[0] < -epsilon)
+            else if(m2Marker0.offset_tVecs[index8][0] - targetPos[0] < -epsilon)
             {
                 newValue1[4] -= 1;
                 fixStepMove(pwmValue1,newValue1,canII,1);
@@ -297,7 +334,7 @@ void moveInRoute(UsbCAN& canII)
                 cout<<"#5 is in position ~\n";
                 break;
             }
-        }//end if(size==3)
+        }//end if(index8 != -1)
     }
 
     //use #7 to grab the cube
@@ -306,20 +343,33 @@ void moveInRoute(UsbCAN& canII)
     fixStepMove(pwmValue1,newValue1,canII,1);
     cout<<"grab the cube successfully ~\n";
 
-    //move the cube to another place
-    newValue1[1] = 250;
-    newValue1[2] = 50;
+    //move the cube to another place (52,66)
+    inout[0] = targetPos[0];
+    inout[1] = 55-diff5_8; //#5 is 95 units above target
+    network.callFunction(inout,inout);
+    newValue1[1] = (int)inout[0];
+    newValue1[2] = (int)inout[1];
     fixStepMove(pwmValue1,newValue1,canII,1);
+    //
+    inout[0] = 52;
+    inout[1] = 66-diff5_8; //#5 is 95 units above target
+    network.callFunction(inout,inout);
+    newValue1[1] = (int)inout[0];
+    newValue1[2] = (int)inout[1];
+    //
+    cout<<"moving the cube to another place...\n";
+    fixStepMove(pwmValue1,newValue1,canII,1);
+    cout<<"finish moving the cube ~\n";
+    
+    //return to initial place
+    newValue1[6] = 100;     //loose the clip
+    fixStepMove(pwmValue1,newValue1,canII,1);
+    //
+    newValue1 = vector<int>({127,255,50,125,235,165,100});
+    fixStepMove(pwmValue1,newValue1,canII,1);
+    cout<<"\n~~~ I FINISH MY JOB ~~~\n-- press 'q' to exit --\n";
 
     //wait...
-    while(1)
-    {
-        camera >> img;
-        m2Marker.detect(img);
-        m2Marker.outputOffset(img,Point(30,30));
-        imshow("view",img);
-        if((char)waitKey(20) == 'q')
-            break;
-    }
+    pthread_join(cameraThread, NULL);
 
 }

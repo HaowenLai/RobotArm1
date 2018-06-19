@@ -24,8 +24,20 @@ class ArucoMarker
     void calibrateOrigin(int calibMarkId);
     void detect(cv::Mat& img);
    
+    //return the rotate angle of the marker
+    float angle(int idIndex);
+    
+    
+    //  Judge if new frame has come after the last time that
+    //this function is called.
+    bool isNewFrame();
+
+    //this function return the index of ID in `offfset<>`
+    //if such id does NOT exist, it returns -1
+    int index(int id);
+
     void outputOffset(cv::Mat& img,cv::Point&& point); //display on image
-    void outputOffset(bool clearConsole = true);      //display on console
+    void outputOffset(bool clearConsole = true);       //display on console
 
     
 
@@ -33,10 +45,10 @@ class ArucoMarker
     const std::vector<int> watchMarkIds;
     const cv::Mat cameraMatrix;
     const cv::Mat distCoeffs;
-    // int specificMarkIndex;
     
     cv::Ptr<cv::aruco::Dictionary> dict;
     std::vector<int> markerIds;
+    std::vector<int> foundIds;
     std::vector<std::vector<cv::Point2f>> markerCorners;
     std::vector<std::vector<cv::Point2f>> rejectedCandidates;
     cv::aruco::DetectorParameters parameter;
@@ -45,6 +57,8 @@ class ArucoMarker
     std::vector<cv::Vec3d> tVecs;
     cv::Vec3d origin_rVecs;
     cv::Vec3d origin_tVecs;
+
+    int frameStamp;
 
   public:
     std::vector<cv::Vec3d> offset_rVecs;
