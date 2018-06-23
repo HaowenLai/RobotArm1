@@ -31,17 +31,22 @@ set(commuSrcList
     src/BpNetwork.cpp
     src/UsbCAN.cpp
     src/ArucoMarker.cpp
+    src/RsVideoCapture.cpp
     src/control.cpp)
 
 set(dataCollectSrcList 
     exec/dataCollect.cpp
     src/ArucoMarker.cpp
+    src/RsVideoCapture.cpp
+    src/BpNetwork.cpp
     src/control.cpp
     src/UsbCAN.cpp)
 
 set(manipulateSrcList 
     exec/manipulate.cpp
     src/ArucoMarker.cpp
+    src/RsVideoCapture.cpp
+    src/BpNetwork.cpp
     src/control.cpp
     src/UsbCAN.cpp)
 
@@ -53,6 +58,6 @@ add_executable(manipulate ${manipulateSrcList})
 
 target_link_libraries(markerPos ${OpenCV_LIBS} realsense2)
 target_link_libraries(twoJoints ${OpenCV_LIBS} m)
-target_link_libraries(commu ${OpenCV_LIBS} ${PYTHON_LIBRARIES} usbcan pthread)
-target_link_libraries(dataCollect ${OpenCV_LIBS} usbcan pthread)
-target_link_libraries(manipulate ${OpenCV_LIBS} usbcan)
+target_link_libraries(commu ${OpenCV_LIBS} ${PYTHON_LIBRARIES} usbcan realsense2 pthread)
+target_link_libraries(dataCollect ${OpenCV_LIBS} ${PYTHON_LIBRARIES} usbcan pthread realsense2)
+target_link_libraries(manipulate ${OpenCV_LIBS} ${PYTHON_LIBRARIES} usbcan realsense2)

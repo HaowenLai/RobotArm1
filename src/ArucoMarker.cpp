@@ -77,12 +77,37 @@ void ArucoMarker::detect(cv::Mat& img)
 }
 
 
-float ArucoMarker::angle(int idIndex)
+float ArucoMarker::angle(int id)
 {
+    int idIndex = 0;
+    for(size_t i=0;i<markerIds.size();i++)
+    {
+        if(markerIds[i] == id)
+        {
+            idIndex = i;
+            break;
+        }
+    }
+    
     auto pt1 = markerCorners[idIndex][0];
     auto pt2 = markerCorners[idIndex][3];
     
     return atan((pt1.y-pt2.y)/(pt2.x-pt1.x));
+}
+
+
+cv::Point2f ArucoMarker::firstCorner(int id)
+{
+    int idIndex = 0;
+    for(size_t i=0;i<markerIds.size();i++)
+    {
+        if(markerIds[i] == id)
+        {
+            idIndex = i;
+            break;
+        }
+    }
+    return markerCorners[idIndex][0];
 }
 
 

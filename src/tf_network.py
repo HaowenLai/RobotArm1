@@ -2,7 +2,7 @@
 import tensorflow as tf
 import numpy as np
 
-save_file = '/home/savage/workspace/cpp_ws/Aruco-marker/data/model.ckpt-48000'
+save_file = '/home/savage/workspace/cpp_ws/Aruco-marker/data/model.ckpt-100000'
 inNum  = 2
 outNum = 2
 
@@ -21,14 +21,24 @@ def addLayer(inputData,inSize,outSize,kp,activity_function = None):
 xs = tf.placeholder(tf.float32,[None,inNum])
 keep_prob = tf.placeholder(tf.float32)
 
-l1 = addLayer(xs,inNum,16,keep_prob,activity_function=tf.nn.relu)
-l2 = addLayer(l1,16,16,keep_prob,activity_function=tf.nn.relu)
-l3 = addLayer(l2,16,16,keep_prob,activity_function=tf.nn.relu)
-l3 = addLayer(l3,16,16,keep_prob,activity_function=tf.nn.relu)
-l3 = addLayer(l3,16,16,keep_prob,activity_function=tf.nn.relu)
-l3 = addLayer(l3,16,16,keep_prob,activity_function=tf.nn.relu)
-l3 = addLayer(l3,16,16,keep_prob,activity_function=tf.nn.relu)
-l4 = addLayer(l3,16,2,keep_prob,activity_function=None)
+# l1 = addLayer(xs,inNum,16,keep_prob,activity_function=tf.nn.relu)
+# l2 = addLayer(l1,16,16,keep_prob,activity_function=tf.nn.relu)
+# l3 = addLayer(l2,16,16,keep_prob,activity_function=tf.nn.relu)
+# l3 = addLayer(l3,16,16,keep_prob,activity_function=tf.nn.relu)
+# l3 = addLayer(l3,16,16,keep_prob,activity_function=tf.nn.relu)
+# l3 = addLayer(l3,16,16,keep_prob,activity_function=tf.nn.relu)
+# l3 = addLayer(l3,16,16,keep_prob,activity_function=tf.nn.relu)
+# l4 = addLayer(l3,16,2,keep_prob,activity_function=None)
+# l5 = tf.round(l4)
+
+l1 = addLayer(xs,inNum,20,keep_prob,activity_function=tf.nn.relu) # relu是激励函数的一种  
+l2 = addLayer(l1,20,20,keep_prob,activity_function=tf.nn.relu)
+l3 = addLayer(l2,20,20,keep_prob,activity_function=tf.nn.relu)
+l3 = addLayer(l3,20,20,keep_prob,activity_function=tf.nn.relu)
+l3 = addLayer(l3,20,20,keep_prob,activity_function=tf.nn.relu)
+l3 = addLayer(l3,20,20,keep_prob,activity_function=tf.nn.relu)
+l3 = addLayer(l3,20,20,keep_prob,activity_function=tf.nn.relu)
+l4 = addLayer(l3,20,2,keep_prob,activity_function=None)
 l5 = tf.round(l4)
 
 init = tf.global_variables_initializer()

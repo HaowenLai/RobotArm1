@@ -7,6 +7,7 @@
 #include "UsbCAN.hpp"
 #include "control.hpp"
 #include "ArucoMarker.hpp"
+#include "RsVideoCapture.hpp"
 #include <stdio.h>
 #include <iostream>
 
@@ -33,20 +34,20 @@ static inline void helpMsg()
 int main()
 {
     //camera instrinc matrix and distort coefficients
-    const Mat M2_cameraMatrix0 = (Mat_<double>(3, 3) 
-        << 1208.33,0, 303.71, 0, 1209.325, 246.98, 0, 0, 1);
-    const Mat M2_distCoeffs0 = (Mat_<double>(1, 5)
-        << -0.3711,-4.0299, 0, 0,22.9040);
-    const Mat M2_cameraMatrix1 = (Mat_<double>(3, 3) 
+    const Mat M2_cameraMatrix0 = (Mat_<double>(3, 3)
         << 926.64,0, 327.76, 0, 926.499, 246.74, 0, 0, 1);
-    const Mat M2_distCoeffs1 = (Mat_<double>(1, 5)
+    const Mat M2_distCoeffs0 = (Mat_<double>(1, 5)
         << -0.4176,0.1635, 0, 0);
-    ArucoMarker m2Marker0(vector<int>({8,6}), M2_cameraMatrix0, M2_distCoeffs0);
-    ArucoMarker m2Marker1(vector<int>({4}), M2_cameraMatrix1, M2_distCoeffs1);
+    const Mat RS_cameraMatrix = (Mat_<double>(3, 3)
+        << 622.60,0, 312.12, 0, 623.37, 235.86, 0, 0, 1);
+    const Mat RS_distCoeffs = (Mat_<double>(1, 4)
+        << 0.156,-0.2792, 0, 0);
+    ArucoMarker rsMarker(vector<int>({5,6,8}), RS_cameraMatrix, RS_distCoeffs);
+    ArucoMarker m2Marker0(vector<int>({4}), M2_cameraMatrix0, M2_distCoeffs0);
 
-    VideoCapture camera0(0);
-    VideoCapture camera1(1);
-    if(!camera0.isOpened() || !camera1.isOpened())
+    VideoCapture camera0(4);
+    RsVideoCapture camera_rs;
+    if(!camera0.isOpened())
     {
         cout<<"cannot open camera"<<endl;
         return -1;
@@ -60,13 +61,12 @@ int main()
 
     Mat img0,img1;
     helpMsg();
-    namedWindow("viewer0",WINDOW_AUTOSIZE);
-    namedWindow("viewer1",WINDOW_AUTOSIZE);
+    namedWindow("front",WINDOW_AUTOSIZE);
+    namedWindow("upper",WINDOW_AUTOSIZE);
     
     //Arm1 init
-    vector<int> oldValue1 {127,250,50,125,235,165,128};
-    vector<int> newValue1 {127,250,50,125,235,165,128};
-    fixStepMove(oldValue1,newValue1,canII,1);
+    vector<int> newValue1;
+    reset2initPos(newValue1,canII,1);
 
     //control logic variables
     int motorNum = 0;
@@ -74,23 +74,23 @@ int main()
     
     while(1)
     {
-        camera0 >> img0;
-        camera1 >> img1;
-        m2Marker0.detect(img0);
-        m2Marker0.outputOffset(img0,Point(30,30));
-        m2Marker1.detect(img1);
-        m2Marker1.outputOffset(img1,Point(30,30));
-        imshow("viewer0",img0);
-        imshow("viewer1",img1);
-        
-        //adjust motor #6
-        if(m2Marker1.index(4)!=-1)
-        {
-            auto angle = m2Marker1.angle(m2Marker1.index(4));
-            newValue1[5] = 165 - angle*91.0828;
-            cout<<angle<<endl;
-            fixStepMove(oldValue1,newValue1,canII,1);
-        }
+        camera_rs >> img0;
+        camera0   >> img1;
+        rsMarker.detect(img0);
+        rsMarker.outputOffset(img0,Point(30,30));
+        m2Marker0.detect(img1);
+        m2Marker0.outputOffset(img1,Point(30,30));
+        imshow("front",img0);
+        imshow("upper",img1);
+
+        // adjust motor #6
+        // if(m2Marker0.index(4)!=-1)
+        // {
+        //     auto angle = m2Marker0.angle(m2Marker0.index(4));
+        //     newValue1[5] = 165 - angle*91.0828;
+        //     cout<<angle<<endl;
+        //     fixStepMove(oldValue1,newValue1,canII,1);
+        // }
         
         switch ((char)waitKey(30))
         {
@@ -111,24 +111,28 @@ int main()
           case ',':
             pwmValue = (pwmValue==255)?255:pwmValue+1;
             newValue1[motorNum] = pwmValue;
-            fixStepMove(oldValue1,newValue1,canII,1);
+            fixStepMove(newValue1,canII,1);
             for(int i=0;i<7;i++)
-                cout<<oldValue1[i] << " ";
+                cout<<newValue1[i] << " ";
             cout<<endl;
             break;
           case '.':
             pwmValue = (pwmValue==0)?0:pwmValue-1;
             newValue1[motorNum] = pwmValue;
-            fixStepMove(oldValue1,newValue1,canII,1);
+            fixStepMove(newValue1,canII,1);
             for(int i=0;i<7;i++)
-                cout<<oldValue1[i] << " ";
+                cout<<newValue1[i] << " ";
             cout<<endl;
             break;
+          case 'r':
+            reset2initPos(newValue1,canII,1);
+            break;
+          
           default:
             break;
         }//end switch
 
-        pwmValue = oldValue1[motorNum];
+        pwmValue = newValue1[motorNum];
     }//end while
 
 

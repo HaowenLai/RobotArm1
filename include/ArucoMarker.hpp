@@ -25,8 +25,10 @@ class ArucoMarker
     void detect(cv::Mat& img);
    
     //return the rotate angle of the marker
-    float angle(int idIndex);
+    float angle(int id);
     
+    //return the first corner of specific index
+    cv::Point2f firstCorner(int id);
     
     //  Judge if new frame has come after the last time that
     //this function is called.
