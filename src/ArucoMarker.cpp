@@ -90,9 +90,9 @@ float ArucoMarker::angle(int id)
     }
     
     auto pt1 = markerCorners[idIndex][0];
-    auto pt2 = markerCorners[idIndex][3];
+    auto pt2 = markerCorners[idIndex][1];
     
-    return atan((pt1.y-pt2.y)/(pt2.x-pt1.x));
+    return atan((pt2.y-pt1.y)/(pt1.x-pt2.x));
 }
 
 

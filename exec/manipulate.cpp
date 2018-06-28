@@ -44,8 +44,10 @@ int main()
         << 0.156,-0.2792, 0, 0);
     ArucoMarker rsMarker(vector<int>({5,6,8}), RS_cameraMatrix, RS_distCoeffs);
     ArucoMarker m2Marker0(vector<int>({4}), M2_cameraMatrix0, M2_distCoeffs0);
+    ArucoMarker m2Marker1(vector<int>({4}), M2_cameraMatrix0, M2_distCoeffs0);
 
     VideoCapture camera0(4);
+    VideoCapture camera1(3);
     RsVideoCapture camera_rs;
     if(!camera0.isOpened())
     {
@@ -59,9 +61,10 @@ int main()
         cout<<"CAN init successfully"<<endl;
     }
 
-    Mat img0,img1;
+    Mat img0,img1,img2;
     helpMsg();
     namedWindow("front",WINDOW_AUTOSIZE);
+    namedWindow("arm",WINDOW_AUTOSIZE);
     namedWindow("upper",WINDOW_AUTOSIZE);
     
     //Arm1 init
@@ -76,22 +79,25 @@ int main()
     {
         camera_rs >> img0;
         camera0   >> img1;
+        camera1   >> img2;
         rsMarker.detect(img0);
         rsMarker.outputOffset(img0,Point(30,30));
         m2Marker0.detect(img1);
         m2Marker0.outputOffset(img1,Point(30,30));
+        m2Marker1.detect(img2);
+        m2Marker1.outputOffset(img2,Point(30,30));
         imshow("front",img0);
-        imshow("upper",img1);
+        imshow("arm",img1);
+        imshow("upper",img2);
 
-        // adjust motor #6
-        // if(m2Marker0.index(4)!=-1)
+        // if(m2Marker1.index(4)!=-1)
         // {
-        //     auto angle = m2Marker0.angle(m2Marker0.index(4));
-        //     newValue1[5] = 165 - angle*91.0828;
-        //     cout<<angle<<endl;
-        //     fixStepMove(oldValue1,newValue1,canII,1);
+        //     auto m1angle = motor1moveAngle(m2Marker1.offset_tVecs[m2Marker1.index(4)]);
+        //     newValue1[0] = -90.91 * m1angle + 127;
+        //     fixStepMove(newValue1,canII,1);
+        //     cout << m1angle << endl;
         // }
-        
+
         switch ((char)waitKey(30))
         {
           case '1':

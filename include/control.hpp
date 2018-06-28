@@ -49,4 +49,10 @@ double obstacleHeight(cv::Mat depthRaw,
                       cv::Point2f targetPos);
 
 
+//  This function retrun the angle between the target and the 
+//yOz plane. Motor 1 should turn pass this angle so as to make
+//the arms and the target in the same plane.
+double motor1moveAngle(cv::Vec3d targetPos);
+
+
 #endif
