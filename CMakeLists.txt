@@ -26,38 +26,49 @@ set(markerPosSrcList
     src/RsVideoCapture.cpp
     src/ArucoMarker.cpp)
 
-set(commuSrcList 
-    exec/communication.cpp
+set(smallTestsSrcList 
+    exec/smallTests.cpp
+    src/BpNetwork.cpp
+    src/UsbCAN.cpp
+    src/ArucoMarker.cpp
+    src/RsVideoCapture.cpp
+    src/control.cpp
+    src/LettersClassify.cpp)
+
+#set(dataCollectSrcList 
+#    exec/dataCollect.cpp
+#    src/ArucoMarker.cpp
+#    src/RsVideoCapture.cpp
+#    src/BpNetwork.cpp
+#    src/control.cpp
+#    src/UsbCAN.cpp)
+
+#set(manipulateSrcList 
+#    exec/manipulate.cpp
+#    src/ArucoMarker.cpp
+#    src/RsVideoCapture.cpp
+#    src/BpNetwork.cpp
+#    src/control.cpp
+#    src/UsbCAN.cpp)
+
+set(mainTaskSrcList 
+    exec/mainTask.cpp
     src/BpNetwork.cpp
     src/UsbCAN.cpp
     src/ArucoMarker.cpp
     src/RsVideoCapture.cpp
     src/control.cpp)
 
-set(dataCollectSrcList 
-    exec/dataCollect.cpp
-    src/ArucoMarker.cpp
-    src/RsVideoCapture.cpp
-    src/BpNetwork.cpp
-    src/control.cpp
-    src/UsbCAN.cpp)
-
-set(manipulateSrcList 
-    exec/manipulate.cpp
-    src/ArucoMarker.cpp
-    src/RsVideoCapture.cpp
-    src/BpNetwork.cpp
-    src/control.cpp
-    src/UsbCAN.cpp)
-
 add_executable(markerPos ${markerPosSrcList})
-add_executable(twoJoints exec/twoJointsSimu.cpp)
-add_executable(commu ${commuSrcList})
-add_executable(dataCollect ${dataCollectSrcList})
-add_executable(manipulate ${manipulateSrcList})
+# add_executable(twoJoints exec/twoJointsSimu.cpp)
+add_executable(smallTests ${smallTestsSrcList})
+# add_executable(dataCollect ${dataCollectSrcList})
+# add_executable(manipulate ${manipulateSrcList})
+add_executable(mainTask ${mainTaskSrcList})
 
 target_link_libraries(markerPos ${OpenCV_LIBS} realsense2)
-target_link_libraries(twoJoints ${OpenCV_LIBS} m)
-target_link_libraries(commu ${OpenCV_LIBS} ${PYTHON_LIBRARIES} usbcan realsense2 pthread)
-target_link_libraries(dataCollect ${OpenCV_LIBS} ${PYTHON_LIBRARIES} usbcan pthread realsense2)
-target_link_libraries(manipulate ${OpenCV_LIBS} ${PYTHON_LIBRARIES} usbcan realsense2)
+# target_link_libraries(twoJoints ${OpenCV_LIBS} m)
+target_link_libraries(smallTests ${OpenCV_LIBS} ${PYTHON_LIBRARIES} usbcan realsense2)
+# target_link_libraries(dataCollect ${OpenCV_LIBS} ${PYTHON_LIBRARIES} usbcan pthread realsense2)
+# target_link_libraries(manipulate ${OpenCV_LIBS} ${PYTHON_LIBRARIES} usbcan realsense2)
+target_link_libraries(mainTask ${OpenCV_LIBS} ${PYTHON_LIBRARIES} usbcan realsense2 pthread)
