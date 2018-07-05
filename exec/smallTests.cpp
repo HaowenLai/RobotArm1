@@ -10,10 +10,10 @@
 
 #include "UsbCAN.hpp"
 #include "BpNetwork.hpp"
+#include "LettersClassify.hpp"
 #include "ArucoMarker.hpp"
 #include "RsVideoCapture.hpp"
 #include "control.hpp"
-#include "LettersClassify.hpp"
 
 #include <stdio.h>
 #include <iostream>
@@ -191,7 +191,7 @@ void tfPredict(UsbCAN& canII)
     //! Network parameter
     string modulePath = "/home/savage/workspace/cpp_ws/Aruco-marker/src";
     string moduleName = "tf_network";
-    string funcName   = "main";
+    string funcName   = "bp_main";
 
     vector<double> inout{0.,0.};
     TfNetwork network(modulePath,moduleName,funcName);
@@ -219,10 +219,10 @@ void letterSort()
 {
     //! Network parameter
     string modulePath = "/home/savage/workspace/cpp_ws/Aruco-marker/src";
-    string moduleName = "letter_classify";
+    string moduleName = "tf_network";
     string funcName   = "main";
 
-    LettersClassify letterNetwork(modulePath,moduleName,funcName);
+    LettersClassify network(modulePath,moduleName,funcName);
 
     VideoCapture camera_rs(3);
     Mat img,img_detect;
@@ -236,7 +236,7 @@ void letterSort()
         rectangle(img,area,Scalar(0,255,0),2);
         imshow("window",img);
 
-        auto result = letterNetwork.detect(img_detect);
+        auto result = network.detect(img_detect);
 
         if(result == LettersClassify::LETTER_b)
             cout<<"yes~~~"<<endl;

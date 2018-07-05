@@ -2,10 +2,10 @@
  * These are classes for bp network.
  *   It provides interface classes for networks calculated
  * or built by Matlab and Python(tensorflow), namely 
- * `MatlabNetwork` and `PyNetwork`
+ * `MatlabNetwork` and `TfNetwork`
  * @Author : Derek Lai
- * @Date   : 2018/6/8
- * @Version: v2.0
+ * @Date   : 2018/7/4
+ * @Version: v3.0
  * Copyright(c) All right reserved
  * ********************************************************/
 
@@ -90,6 +90,7 @@ class TfNetwork
               std::string funcName);
     ~TfNetwork();
     
+    //position predict
     //input and output can be the same variable
     void callFunction(std::vector<double>& input,
                       std::vector<double>& output);
@@ -97,9 +98,10 @@ class TfNetwork
   private:
     PyObject* pModule;      //module obj
     PyObject* pDict;        //fuction dict obj
-    PyObject* pFunc;        //target function
+    PyObject* pFunc;        //position function
     PyObject* pArgs;        //target function argument
     PyObject* pRetVal;      //return value
+    
     PyObject* pListXdata;   //X_data in List type
 };
 

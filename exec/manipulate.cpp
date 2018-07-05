@@ -46,8 +46,8 @@ int main()
     ArucoMarker m2Marker0(vector<int>({4}), M2_cameraMatrix0, M2_distCoeffs0);
     ArucoMarker m2Marker1(vector<int>({4}), M2_cameraMatrix0, M2_distCoeffs0);
 
-    VideoCapture camera0(4);
-    VideoCapture camera1(3);
+    VideoCapture camera0(1);    //arm camera
+    VideoCapture camera1(0);    //upper camera
     RsVideoCapture camera_rs;
     if(!camera0.isOpened())
     {

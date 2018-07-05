@@ -91,7 +91,7 @@ int main()
 
     helpMsg();
 
-    VideoCapture camera1(4);
+    // VideoCapture camera1(4);
     // VideoCapture camera1(0);
     // camera.set(CV_CAP_PROP_FRAME_WIDTH,1024);
     // camera.set(CV_CAP_PROP_FRAME_HEIGHT,768);
@@ -99,7 +99,7 @@ int main()
     RsVideoCapture camera_rs;
 
     namedWindow("M0", WINDOW_AUTOSIZE);
-    namedWindow("M1", WINDOW_AUTOSIZE);
+    // namedWindow("M1", WINDOW_AUTOSIZE);
     // namedWindow("RS", WINDOW_AUTOSIZE);
 
     while (1)
@@ -108,21 +108,21 @@ int main()
         m2Marker0.detect(img_m0);
         m2Marker0.outputOffset(img_m0,Point(30,30));
         
-        camera1 >> img_m1;
+        // camera1 >> img_m1;
         // m2Marker1.detect(img_m1);
         // m2Marker1.outputOffset(img_m1,Point(30,30));
 
         imshow("M0", img_m0);
-        imshow("M1", img_m1);
+        // imshow("M1", img_m1);
         
         //obstacle test
-        if(m2Marker0.index(6)!=-1)
-        {
-            auto targetPos = m2Marker0.firstCorner(6);
-            auto height = obstacleHeight(camera_rs.DepthRaw,
-                camera_rs.depth_scale,targetPos);
-            cout << height <<endl;
-        }
+        // if(m2Marker0.index(6)!=-1)
+        // {
+        //     auto targetPos = m2Marker0.firstCorner(6);
+        //     auto height = obstacleHeight(camera_rs.DepthRaw,
+        //         camera_rs.depth_scale,targetPos);
+        //     cout << height <<endl;
+        // }
         
         
         switch ((char)waitKey(50))

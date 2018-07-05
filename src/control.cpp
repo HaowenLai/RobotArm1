@@ -108,3 +108,4 @@ double motor1moveAngle(Vec3d targetPos)
     const Vec3d origin(-249.5, -31.7, 0);
     return atan((targetPos[1]-origin[1])/(targetPos[0]-origin[0]));
 }
+

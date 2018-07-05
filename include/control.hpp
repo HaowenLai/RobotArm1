@@ -2,8 +2,8 @@
  *   This file contains control algerithms that may be used 
  * in robotic arm control.
  * @Author : Derek Lai
- * @Date   : 2018/6/11
- * @Version: v1.0
+ * @Date   : 2018/7/4
+ * @Version: v2.5
  * Copyright(c) All right reserved
  * ********************************************************/
 
@@ -14,6 +14,16 @@
 #include <opencv2/opencv.hpp>
 #include "UsbCAN.hpp"
 #include "BpNetwork.hpp"
+
+//robot arm event flag, for camera thread control
+namespace robot_arm
+{
+    enum EVENT_FLAG
+    {
+        TAKE_ROI,
+        MISSION_OK
+    };
+}
 
 //  This function change the motor pwm values from old values
 //to new values by a fixed step Δx, where Δx = 1 by default. 
@@ -53,6 +63,5 @@ double obstacleHeight(cv::Mat depthRaw,
 //yOz plane. Motor 1 should turn pass this angle so as to make
 //the arms and the target in the same plane.
 double motor1moveAngle(cv::Vec3d targetPos);
-
 
 #endif

@@ -14,6 +14,7 @@
 
 #include "UsbCAN.hpp"
 #include "BpNetwork.hpp"
+#include "LettersClassify.hpp"
 #include "ArucoMarker.hpp"
 #include "RsVideoCapture.hpp"
 #include "control.hpp"
@@ -42,7 +43,6 @@ ArucoMarker m2Marker1(vector<int>({4}), M2_cameraMatrix1, M2_distCoeffs1);
 ArucoMarker m2Marker2(vector<int>({4}), M2_cameraMatrix1, M2_distCoeffs1);
 RsVideoCapture camera_rs;
 
-
 #define _DEBUG_MODE_
 
 int main()
@@ -58,21 +58,18 @@ int main()
     pthread_t cameraThread;
     pthread_create(&cameraThread, NULL, camera_thread, NULL);
 
+    //! Network parameter
+    string modulePath = "/home/savage/workspace/cpp_ws/Aruco-marker/src";
+    string moduleName = "tf_network";
+    string funcName   = "bp_main";
+    TfNetwork network(modulePath,moduleName,funcName);
+    
     //Arm1 initialize
     vector<int> newValue1;
     reset2initPos(newValue1,canII,1);
     cout << "press <enter> if you get ready" << endl;
     cin.get();
-
-    //! Network parameter
-    string modulePath = "/home/savage/workspace/cpp_ws/Aruco-marker/src";
-    string moduleName = "tf_network";
-    string funcName   = "main";
-
-    vector<double> inout{0.,0.};
-    TfNetwork network(modulePath,moduleName,funcName);
-
-    //-------------- begin algrithm -----------------------
+    //------------------ begin algrithm -----------------------
 
     const int diff5_8 = 92; //height difference between #5 and #8
     
@@ -99,7 +96,10 @@ int main()
     //deal with obstacle
     if(obstacleH < 50)
     {
-        move2desiredPos(targetPos[0],obstacleH-diff5_8-30,
+        newValue1[1] = 230;
+        fixStepMove(newValue1,canII,1);
+        
+        move2desiredPos(targetPos[0],obstacleH-diff5_8-35,
                     newValue1,network,canII,1);
     }
     #ifdef _DEBUG_MODE_
@@ -107,7 +107,7 @@ int main()
     #endif
 
     //above the target, for more precise adjustment
-    int x_offset = 10;
+    int x_offset = 5;
     move2desiredPos(targetPos[0]+x_offset,targetPos[1]-diff5_8-25,
                     newValue1,network,canII,1);
     #ifdef _DEBUG_MODE_
@@ -234,6 +234,9 @@ int main()
                 break;
             }
         }//end if(index8 != -1)
+
+        if(newValue1[4]==255 || newValue1[4]==0)
+            break;
     }
     #ifdef _DEBUG_MODE_
     cin.get();
@@ -241,17 +244,19 @@ int main()
 
     //use #7 to grab the cube
     cout<<"start to grab the cube\n";
-    newValue1[6] = 130;
+    newValue1[6] = 140;
     fixStepMove(newValue1,canII,1);
     cout<<"grab the cube successfully ~\n";
 
-    //move the cube to another place (92,9)
+    //move the cube to another place (92,6)
     move2desiredPos(targetPos[0],-1.0-diff5_8,
                     newValue1,network,canII,1);
     newValue1[0] = 127;
-    newValue1[5] = 165;
     newValue1[3] = 125;
-    move2desiredPos(92.0,9.0-diff5_8,
+    newValue1[4] = 255;
+    newValue1[5] = 165;
+    fixStepMove(newValue1,canII,1);
+    move2desiredPos(92.0,6.0-diff5_8,
                     newValue1,network,canII,1);
     cout<<"finish moving the cube ~\n";
     
@@ -275,8 +280,8 @@ int main()
 static void* camera_thread(void* data)
 {
     Mat img0, img1, img2;
-    VideoCapture camera1(4);
-    VideoCapture camera2(3);
+    VideoCapture camera1(1);    //arm camera
+    VideoCapture camera2(0);    //upper camera
     namedWindow("view_front", WINDOW_AUTOSIZE);
     namedWindow("view_arm", WINDOW_AUTOSIZE);
     namedWindow("view_up", WINDOW_AUTOSIZE);

@@ -140,11 +140,11 @@ TfNetwork::TfNetwork(string path,string moduleName,string funcName)
         printf("can't find the function dict");
     }
 
-    // 找出函数名为main的函数
+    // 找出函数名为funcName_pos的函数
     pFunc = PyDict_GetItemString(pDict, funcName.c_str());
     if ( !pFunc || !PyCallable_Check(pFunc) )
     {
-        printf("can't find function `main`");
+        printf("can't find function `funcName_pos`\n");
     }
 }
 
@@ -175,6 +175,4 @@ void TfNetwork::callFunction(std::vector<double>& input,
     Py_CLEAR(pRetVal);
 }
 
-
-
-//--------------------end of Class `PyNetwork` -----------------------
+//--------------------end of Class `TfNetwork` -----------------------
