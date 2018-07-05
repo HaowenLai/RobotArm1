@@ -11,9 +11,8 @@ using namespace std;
 using namespace cv;
 
 //global variables
-vector<int> initValue {127,255,50,125,235,165,100};
+const vector<int> initValue {127,255,50,125,235,165,100};
 vector<int> oldVals = initValue;
-
 
 void fixStepMove(std::vector<int>& newVals,
                  UsbCAN& canDev,
@@ -56,7 +55,7 @@ void reset2initPos(std::vector<int>& newVals,
                    int step)
 {
     newVals = initValue;
-    fixStepMove(initValue,canDev,ID,step);
+    fixStepMove(newVals,canDev,ID,step);
 }
 
 
@@ -109,3 +108,10 @@ double motor1moveAngle(Vec3d targetPos)
     return atan((targetPos[1]-origin[1])/(targetPos[0]-origin[0]));
 }
 
+
+void getDetectImg(robot_arm::EVENT_FLAG& flag)
+{
+    usleep(20*1000);
+    flag = robot_arm::TAKE_ROI;
+    while(flag!=robot_arm::MISSION_OK);
+}

@@ -14,6 +14,7 @@
 #include "ArucoMarker.hpp"
 #include "RsVideoCapture.hpp"
 #include "control.hpp"
+#include "Wifi.hpp"
 
 #include <stdio.h>
 #include <iostream>
@@ -29,6 +30,8 @@ void receiveFromCAN(UsbCAN& canII);
 void matlabPredict(UsbCAN& canII);
 void tfPredict(UsbCAN& canII);
 void letterSort();
+void wifiClient();
+void wifiServer();
 
 int main()
 {
@@ -45,7 +48,9 @@ int main()
            "3. receiveFromCAN\n"
            "4. matlabPredict\n"
            "5. tfPredict\n"
-           "6. letterSort\n";
+           "6. letterSort\n"
+           "7. wifi client\n"
+           "8. wifi server\n";
     
     int choose = 1;
     cin >> choose;
@@ -68,6 +73,12 @@ int main()
         break;
       case 6:
         letterSort();
+        break;
+      case 7:
+        wifiClient();
+        break;
+      case 8:
+        wifiServer();
         break;
       default:
         cout<<"your choice is not in the range! Exit.\n";
@@ -244,3 +255,32 @@ void letterSort()
             cout<<"wrong!!@@##"<<endl;
     }
 }
+
+
+//wifi client to send and receive message
+void wifiClient()
+{
+    Wifi c_wifi("127.0.0.1",1234);
+    auto msg_buff = new unsigned char[164*164*3];
+    while(!c_wifi.recvNewMSG(msg_buff,164*164*3));
+
+    Mat img(164,164,CV_8UC3,msg_buff);
+    imshow("haha",img);
+    waitKey(0);
+    delete[] msg_buff;
+    cin.get();
+}
+
+
+//wifi server to send and receive message
+void wifiServer()
+{
+    Mat img = imread("/home/savage/Desktop/16.jpg");
+    Mat roi = img(Rect(130,130,164,164)).clone();
+   
+    Wifi s_wifi(1234,1);
+    s_wifi.sendMsg(roi.data,164*164*3,0);
+    cout<<"finish sending..."<<endl;
+    cin.get();
+}
+

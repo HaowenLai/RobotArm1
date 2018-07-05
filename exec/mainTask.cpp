@@ -9,14 +9,14 @@
  * target to corresponding places.
  *
  * @Author : Derek Lai (LHW)
- * @Date   : 2018/6/29
+ * @Date   : 2018/7/5
  * ************************************************************/
 
 #include "UsbCAN.hpp"
 #include "BpNetwork.hpp"
-#include "LettersClassify.hpp"
 #include "ArucoMarker.hpp"
 #include "RsVideoCapture.hpp"
+#include "Wifi.hpp"
 #include "control.hpp"
 
 #include <pthread.h>
@@ -43,7 +43,11 @@ ArucoMarker m2Marker1(vector<int>({4}), M2_cameraMatrix1, M2_distCoeffs1);
 ArucoMarker m2Marker2(vector<int>({4}), M2_cameraMatrix1, M2_distCoeffs1);
 RsVideoCapture camera_rs;
 
-#define _DEBUG_MODE_
+//global variables, to communicate with camera thread
+auto controlFlag = robot_arm::MISSION_OK;
+Mat detectLetterImg;
+
+// #define _DEBUG_MODE_
 
 int main()
 {
@@ -64,10 +68,13 @@ int main()
     string funcName   = "bp_main";
     TfNetwork network(modulePath,moduleName,funcName);
     
+    //wifi communication
+    Wifi s_wifi(1234,1);
+
     //Arm1 initialize
     vector<int> newValue1;
     reset2initPos(newValue1,canII,1);
-    cout << "press <enter> if you get ready" << endl;
+    cout << "Program is ready.\nPress <enter> to continue.." << endl;
     cin.get();
     //------------------ begin algrithm -----------------------
 
@@ -210,7 +217,7 @@ int main()
     cout<<"start to adjust #8...\n";
     while(true)
     {
-        const double epsilon = 2;
+        const double epsilon = 4;
 
         if(!m2Marker0.isNewFrame())
             continue;
@@ -248,6 +255,14 @@ int main()
     fixStepMove(newValue1,canII,1);
     cout<<"grab the cube successfully ~\n";
 
+    
+    //check the bottom surface
+    newValue1 = vector<int> {90,110,123,0,235,191,140};
+    fixStepMove(newValue1,canII,1);
+    getDetectImg(controlFlag);
+    s_wifi.sendMsg(detectLetterImg.data,50*50*3,0);
+    
+    
     //move the cube to another place (92,6)
     move2desiredPos(targetPos[0],-1.0-diff5_8,
                     newValue1,network,canII,1);
@@ -300,6 +315,13 @@ static void* camera_thread(void* data)
         imshow("view_front",img0);
         imshow("view_arm",img1);
         imshow("view_up",img2);
+
+        if(controlFlag == robot_arm::TAKE_ROI)
+        {
+            detectLetterImg = img0(Rect(256,144,50,50)).clone();
+            imshow("haha",detectLetterImg);
+            controlFlag = robot_arm::MISSION_OK;
+        }
     }
 
     pthread_exit(0);

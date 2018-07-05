@@ -1,6 +1,9 @@
 #!/usr/bin/python3
 import tensorflow as tf
 import numpy as np
+import os
+
+os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 
 # --------------------------- For position Network --------------
 save_file = '/home/savage/workspace/cpp_ws/Aruco-marker/data/model.ckpt-100000'

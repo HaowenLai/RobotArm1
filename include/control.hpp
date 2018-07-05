@@ -64,4 +64,9 @@ double obstacleHeight(cv::Mat depthRaw,
 //the arms and the target in the same plane.
 double motor1moveAngle(cv::Vec3d targetPos);
 
+
+//  wait until the image of letter to be detected is ready
+void getDetectImg(robot_arm::EVENT_FLAG& flag);
+
+
 #endif

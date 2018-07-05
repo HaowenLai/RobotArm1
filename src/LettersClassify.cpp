@@ -63,8 +63,8 @@ LettersClassify::~LettersClassify()
 
 LettersClassify::Letters LettersClassify::detect(cv::Mat& InputImage)
 {
-    const int IMAGE_HEIGHT = 64;
-    const int IMAGE_WIDTH  = 64;
+    const int IMAGE_HEIGHT = 50;
+    const int IMAGE_WIDTH  = 50;
 
     pArgs  = PyTuple_New(1);
     pImageData = PyList_New(0);
