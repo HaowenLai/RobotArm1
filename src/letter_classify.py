@@ -4,7 +4,7 @@ from imageai.Prediction.Custom import CustomImagePrediction
 import numpy as np
 import os
 
-execution_path = '/home/savage/workspace/cpp_ws/Aruco-marker/data'
+execution_path = os.path.join(os.path.split(os.getcwd())[0],'data')
 IMAGE_HEIGHT = 50
 IMAGE_WIDTH  = 50
 rtVal={'b':[0],'e':[1],'f':[2],'x':[3]}

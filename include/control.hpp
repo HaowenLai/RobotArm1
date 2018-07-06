@@ -23,23 +23,38 @@ namespace robot_arm
         TAKE_ROI,
         MISSION_OK
     };
+    enum MOVEMENT_METHOD
+    {
+        FIX_STEP,
+        EVEN_VELOCITY
+    };
 }
 
 //  This function change the motor pwm values from old values
 //to new values by a fixed step Δx, where Δx = 1 by default. 
-//It will not return until the new values are reached.
+//It will not return until the new values are reached. Be aware
+//that some motors may reach their final values earlier.
 //@CAUTION: step should be positive integer!
 void fixStepMove(std::vector<int>& newVals,
                  UsbCAN& canDev,
-                 int ID,
-                 int step = 1);
+                 int ID);
+
+
+//  This function moves the arm to `newVals` in even velocity.
+//All motor move at the same time and stop together when they
+//reach the desired positon. It will not return until the new 
+//values are reached. 
+//@CAUTION: step should be positive integer!
+void evenVelMove(std::vector<int>& newVals,
+                 UsbCAN& canDev,
+                 int ID);
 
 
 // Make all motor reset to initial states
 void reset2initPos(std::vector<int>& newVals,
                    UsbCAN& canDev,
                    int ID,
-                   int step = 1);
+                   robot_arm::MOVEMENT_METHOD method = robot_arm::EVEN_VELOCITY);
 
 
 // The motor values of desired position is calculated
@@ -49,7 +64,8 @@ void move2desiredPos(double x,double y,
                      TfNetwork& network,
                      UsbCAN& canDev,
                      int ID,
-                     int step = 1);
+                     robot_arm::MOVEMENT_METHOD method = robot_arm::EVEN_VELOCITY);
+
 
 //  This function detect the rectangle area from (150,180) to 
 //targetPos to find whether an obstacle is presented and return

@@ -56,6 +56,7 @@ Wifi::Wifi(int port,int clientNumber):clientNum(clientNumber)
     bind(sock_fd,(struct sockaddr *)&s_in,sizeof(s_in));
     listen(sock_fd,1);//only one connection in the same time
 
+    cout<<"waiting for connection from client(s).."<<endl;
     for(int i = 0;i<clientNum;i++)
     {
         client_fd[i] = accept(sock_fd,nullptr,nullptr);
@@ -142,26 +143,9 @@ bool Wifi::recvNewMSG()
         return false;
     else
     {
-        switch(get_msg)
-        {
-          case 0x00:
-            message = MSG_TARGET_IN_POSITION;
-            break;
-          case 0x01:
-            message = MSG_TARGET_QUALIFIED;
-            break;
-          case 0x02:
-            message = MSG_TARGET_UNQUALIFIED;
-            break;
-          case 0x03:
-            message = MSG_FINISH_STAMPING;
-            break;
-          case 0x04:
-            message = MSG_ROGOR;
-            break;
-        }
+        message=(Wifi::WIFI_MSG)get_msg;
+        return true;
     }
-    return true;
 }
 
 //client recv a long message
@@ -197,26 +181,9 @@ bool Wifi::recvNewMSG(int clientNumber)
         return false;
     else
     {
-        switch(get_msg)
-        {
-          case 0x00:
-            message = MSG_TARGET_IN_POSITION;
-            break;
-          case 0x01:
-            message = MSG_TARGET_QUALIFIED;
-            break;
-          case 0x02:
-            message = MSG_TARGET_UNQUALIFIED;
-            break;
-          case 0x03:
-            message = MSG_FINISH_STAMPING;
-            break;
-          case 0x04:
-            message = MSG_ROGOR;
-            break;
-        }
+        message=(Wifi::WIFI_MSG)get_msg;
+        return true;
     }
-    return true;
 }
 
 //server recv a long message

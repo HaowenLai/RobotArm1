@@ -26,8 +26,10 @@
 using namespace std;
 using namespace cv;
 
-static void* camera_thread(void* data);
+// #define _SINGLE_MOVE_MODE_
+#define _NO_VIDEO_MODE_
 
+static void* camera_thread(void* data);
 
 //camera instrinc matrix and distort coefficients
 const Mat RS_cameraMatrix = (Mat_<double>(3, 3)
@@ -47,10 +49,22 @@ RsVideoCapture camera_rs;
 auto controlFlag = robot_arm::MISSION_OK;
 Mat detectLetterImg;
 
-// #define _DEBUG_MODE_
 
-int main()
+int main(int argc, char* argv[])
 {
+    //  The first argument is program path, the second argument
+    //is the number of times that this program will run. i.e.
+    //how many times will the arm grab the cube.
+    if(argc != 2)
+    {
+        cout << "argument number is wrong!\n"
+             << "You must add the times that the arm will grab the cube\n";
+        exit(-1);
+    }
+    int runCount = 1;
+    const int runTimes = atoi(argv[1]);
+
+    
     UsbCAN canII;
     if(canII.initCAN(UsbCAN::BAUDRATE_500K))
     {
@@ -63,7 +77,10 @@ int main()
     pthread_create(&cameraThread, NULL, camera_thread, NULL);
 
     //! Network parameter
-    string modulePath = "/home/savage/workspace/cpp_ws/Aruco-marker/src";
+    char programName[100];
+    getcwd(programName,100);    //get program path
+    string modulePath(programName);
+    modulePath = modulePath.substr(0,modulePath.find_last_of('/'))+"/src";
     string moduleName = "tf_network";
     string funcName   = "bp_main";
     TfNetwork network(modulePath,moduleName,funcName);
@@ -72,14 +89,15 @@ int main()
     Wifi s_wifi(1234,1);
 
     //Arm1 initialize
-    vector<int> newValue1;
-    reset2initPos(newValue1,canII,1);
+    vector<int> motorValues;
+    reset2initPos(motorValues,canII,1);
     cout << "Program is ready.\nPress <enter> to continue.." << endl;
     cin.get();
     //------------------ begin algrithm -----------------------
 
     const int diff5_8 = 92; //height difference between #5 and #8
     
+again:
     //get target position
     Vec3d targetPos;
     double obstacleH;
@@ -103,30 +121,30 @@ int main()
     //deal with obstacle
     if(obstacleH < 50)
     {
-        newValue1[1] = 230;
-        fixStepMove(newValue1,canII,1);
+        motorValues[1] = 230;
+        fixStepMove(motorValues,canII,1);
         
         move2desiredPos(targetPos[0],obstacleH-diff5_8-35,
-                    newValue1,network,canII,1);
+                    motorValues,network,canII,1);
     }
-    #ifdef _DEBUG_MODE_
+    #ifdef _SINGLE_MOVE_MODE_
     cin.get();
     #endif
 
     //above the target, for more precise adjustment
     int x_offset = 5;
     move2desiredPos(targetPos[0]+x_offset,targetPos[1]-diff5_8-25,
-                    newValue1,network,canII,1);
-    #ifdef _DEBUG_MODE_
+                    motorValues,network,canII,1);
+    #ifdef _SINGLE_MOVE_MODE_
     cin.get();
     #endif
 
     //motor #1 roughly move (rotate)
-    newValue1[0] = -90.91 * motor1angle + 127;
-    fixStepMove(newValue1,canII,1);
+    motorValues[0] = -90.91 * motor1angle + 127;
+    fixStepMove(motorValues,canII,1);
     cout << motor1angle << endl;
     
-    #ifdef _DEBUG_MODE_
+    #ifdef _SINGLE_MOVE_MODE_
     cin.get();
     #endif
     
@@ -144,13 +162,13 @@ int main()
             
             if(angle_offset > epsilon)
             {
-                newValue1[5] -= 1;
-                fixStepMove(newValue1,canII,1);
+                motorValues[5] -= 1;
+                fixStepMove(motorValues,canII,1);
             }
             else if(angle_offset < -epsilon)
             {
-                newValue1[5] += 1;
-                fixStepMove(newValue1,canII,1);
+                motorValues[5] += 1;
+                fixStepMove(motorValues,canII,1);
             }
             else
             {
@@ -163,11 +181,11 @@ int main()
             //ensure upper label is in vision
             x_offset++;
             move2desiredPos(targetPos[0]+x_offset,targetPos[1]-diff5_8-25,
-                    newValue1,network,canII,1);
+                    motorValues,network,canII,1);
             usleep(20*1000);
         }
     }
-    #ifdef _DEBUG_MODE_
+    #ifdef _SINGLE_MOVE_MODE_
     cin.get();
     #endif
 
@@ -186,13 +204,13 @@ int main()
             
             if(targetX - centerX > epsilon)
             {
-                newValue1[3] -= 1;
-                fixStepMove(newValue1,canII,1);
+                motorValues[3] -= 1;
+                fixStepMove(motorValues,canII,1);
             }
             else if(targetX - centerX < -epsilon)
             {
-                newValue1[3] += 1;
-                fixStepMove(newValue1,canII,1);
+                motorValues[3] += 1;
+                fixStepMove(motorValues,canII,1);
             }
             else
             {
@@ -201,15 +219,15 @@ int main()
             }
         }//end if(m2Marker1.index(4) != -1)
     }
-    #ifdef _DEBUG_MODE_
+    #ifdef _SINGLE_MOVE_MODE_
     cin.get();
     #endif
 
 
     //dig into the target
-    move2desiredPos(targetPos[0]+x_offset,targetPos[1]-diff5_8-5,
-                    newValue1,network,canII,1);
-    #ifdef _DEBUG_MODE_
+    move2desiredPos(targetPos[0]+x_offset,targetPos[1]-diff5_8-2,
+                    motorValues,network,canII,1);
+    #ifdef _SINGLE_MOVE_MODE_
     cin.get();
     #endif
 
@@ -227,13 +245,13 @@ int main()
         {
             if(m2Marker0.offset_tVecs[index8][0] - targetPos[0] > epsilon)
             {
-                newValue1[4] += 1;
-                fixStepMove(newValue1,canII,1);
+                motorValues[4] += 1;
+                fixStepMove(motorValues,canII,1);
             }
             else if(m2Marker0.offset_tVecs[index8][0] - targetPos[0] < -epsilon)
             {
-                newValue1[4] -= 1;
-                fixStepMove(newValue1,canII,1);
+                motorValues[4] -= 1;
+                fixStepMove(motorValues,canII,1);
             }
             else
             {
@@ -242,48 +260,57 @@ int main()
             }
         }//end if(index8 != -1)
 
-        if(newValue1[4]==255 || newValue1[4]==0)
+        if(motorValues[4]==255 || motorValues[4]==0)
             break;
     }
-    #ifdef _DEBUG_MODE_
+    #ifdef _SINGLE_MOVE_MODE_
     cin.get();
     #endif
 
     //use #7 to grab the cube
     cout<<"start to grab the cube\n";
-    newValue1[6] = 140;
-    fixStepMove(newValue1,canII,1);
+    motorValues[6] = 140;
+    fixStepMove(motorValues,canII,1);
     cout<<"grab the cube successfully ~\n";
 
     
     //check the bottom surface
-    newValue1 = vector<int> {90,110,123,0,235,191,140};
-    fixStepMove(newValue1,canII,1);
+    s_wifi.sendMsg(Wifi::MSG_PREPARE_TO_DETECT,0);
+    motorValues = vector<int> {90,110,123,0,235,191,140};
+    evenVelMove(motorValues,canII,1);
     getDetectImg(controlFlag);
     s_wifi.sendMsg(detectLetterImg.data,50*50*3,0);
     
     
     //move the cube to another place (92,6)
     move2desiredPos(targetPos[0],-1.0-diff5_8,
-                    newValue1,network,canII,1);
-    newValue1[0] = 127;
-    newValue1[3] = 125;
-    newValue1[4] = 255;
-    newValue1[5] = 165;
-    fixStepMove(newValue1,canII,1);
+                    motorValues,network,canII,1);
+    motorValues[0] = 127;
+    motorValues[3] = 125;
+    motorValues[4] = 255;
+    motorValues[5] = 165;
+    evenVelMove(motorValues,canII,1);
     move2desiredPos(92.0,6.0-diff5_8,
-                    newValue1,network,canII,1);
+                    motorValues,network,canII,1);
     cout<<"finish moving the cube ~\n";
     
     //loose the clip
-    newValue1[6] = 100;
-    fixStepMove(newValue1,canII,1);
+    motorValues[6] = 100;
+    fixStepMove(motorValues,canII,1);
     
     //return to initial position
-    reset2initPos(newValue1,canII,1);
-    cout<<"\n~~~ I FINISH MY JOB ~~~\n-- press 'q' to exit --\n";
+    reset2initPos(motorValues,canII,1);
+
+    //whether it has finished all jobs
+    if(runCount < runTimes)
+    {
+        runCount++;
+        goto again;
+    }
 
     //wait...
+    cout<<"\n~~~ I FINISH MY JOB ~~~\n-- press 'q' to exit --\n";
+    s_wifi.sendMsg(Wifi::MSG_FINISH_ALL_JOB,0);
     pthread_join(cameraThread, NULL);
     
     return 0;
@@ -297,29 +324,35 @@ static void* camera_thread(void* data)
     Mat img0, img1, img2;
     VideoCapture camera1(1);    //arm camera
     VideoCapture camera2(0);    //upper camera
+
+    #ifndef _NO_VIDEO_MODE_
     namedWindow("view_front", WINDOW_AUTOSIZE);
     namedWindow("view_arm", WINDOW_AUTOSIZE);
     namedWindow("view_up", WINDOW_AUTOSIZE);
-    
+    #endif
+
     while((char)waitKey(20) != 'q')
     {
         camera_rs >> img0;
         camera1 >> img1;
         camera2 >> img2;
         m2Marker0.detect(img0);
-        m2Marker0.outputOffset(img0,Point(30,30));
         m2Marker1.detect(img1);
-        m2Marker1.outputOffset(img1,Point(30,30));
         m2Marker2.detect(img2);
+
+        #ifndef _NO_VIDEO_MODE_
+        m2Marker0.outputOffset(img0,Point(30,30));
+        m2Marker1.outputOffset(img1,Point(30,30));
         m2Marker2.outputOffset(img2,Point(30,30));
         imshow("view_front",img0);
         imshow("view_arm",img1);
         imshow("view_up",img2);
+        #endif
 
         if(controlFlag == robot_arm::TAKE_ROI)
         {
             detectLetterImg = img0(Rect(256,144,50,50)).clone();
-            imshow("haha",detectLetterImg);
+            imshow("Letter",detectLetterImg);
             controlFlag = robot_arm::MISSION_OK;
         }
     }

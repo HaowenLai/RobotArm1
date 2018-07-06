@@ -17,7 +17,10 @@ using namespace cv;
 int main()
 {
     //! Network parameter
-    string modulePath = "/home/savage/workspace/cpp_ws/Aruco-marker/src";
+    char programName[100];
+    getcwd(programName,100);    //get program path
+    string modulePath(programName);
+    modulePath = modulePath.substr(0,modulePath.find_last_of('/'))+"/src";
     string moduleName = "letter_classify";
     string funcName   = "main";
     LettersClassify network(modulePath,moduleName,funcName);
@@ -25,25 +28,32 @@ int main()
     Wifi c_wifi("127.0.0.1",1234);
 
     const int msgLength = 50*50*3;
-    auto msg_buff = new unsigned char[msgLength];
-    while(!c_wifi.recvNewMSG(msg_buff,msgLength));
-
-    Mat img(50,50,CV_8UC3,msg_buff);
+    unsigned char msg_buff[msgLength];
     
-    switch(network.detect(img))
+    while(1)
     {
-      case LettersClassify::LETTER_b:
-        cout<<"\n\nb\n";
-        break;
-      case LettersClassify::LETTER_e:
-        cout<<"\n\ne\n";
-        break;
-      case LettersClassify::LETTER_f:
-        cout<<"\n\nf\n";
-        break;
-      case LettersClassify::LETTER_x:
-        cout<<"\n\nx\n";
-        break;
+        while(!c_wifi.recvNewMSG());
+        if(c_wifi.message == Wifi::MSG_FINISH_ALL_JOB)
+            break;
+
+        while(!c_wifi.recvNewMSG(msg_buff,msgLength));
+        Mat img(50,50,CV_8UC3,msg_buff);
+        
+        switch(network.detect(img))
+        {
+        case LettersClassify::LETTER_b:
+            cout<<"\n\nb\n\n";
+            break;
+        case LettersClassify::LETTER_e:
+            cout<<"\n\ne\n\n";
+            break;
+        case LettersClassify::LETTER_f:
+            cout<<"\n\nf\n\n";
+            break;
+        case LettersClassify::LETTER_x:
+            cout<<"\n\nx\n\n";
+            break;
+        }
     }
 
     return 0;
