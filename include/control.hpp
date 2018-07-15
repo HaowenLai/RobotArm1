@@ -81,6 +81,13 @@ double obstacleHeight(cv::Mat depthRaw,
 double motor1moveAngle(cv::Vec3d targetPos);
 
 
+// This function return the value that motor1 should move in
+//order to reach the position that is above the target. It 
+//works based on func `motor1moveAngle`, and its coeffictients
+//are calculated by <atlab.
+int motor1moveValue(cv::Vec3d targetPos);
+
+
 //  wait until the image of letter to be detected is ready
 void getDetectImg(robot_arm::EVENT_FLAG& flag);
 

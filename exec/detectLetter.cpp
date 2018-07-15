@@ -43,15 +43,19 @@ int main()
         {
         case LettersClassify::LETTER_b:
             cout<<"\n\nb\n\n";
+            c_wifi.sendMsg(Wifi::MSG_TARGET_QUALIFIED);
             break;
         case LettersClassify::LETTER_e:
             cout<<"\n\ne\n\n";
+            c_wifi.sendMsg(Wifi::MSG_TARGET_QUALIFIED);
             break;
         case LettersClassify::LETTER_f:
             cout<<"\n\nf\n\n";
+            c_wifi.sendMsg(Wifi::MSG_TARGET_UNQUALIFIED);
             break;
         case LettersClassify::LETTER_x:
             cout<<"\n\nx\n\n";
+            c_wifi.sendMsg(Wifi::MSG_TARGET_UNQUALIFIED);
             break;
         }
     }

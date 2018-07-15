@@ -3,7 +3,7 @@
  * robotic arm manually. You can refer to the 
  * help message for specific key method.
  * *******************************************/
-
+#include "parameters.hpp"
 #include "UsbCAN.hpp"
 #include "control.hpp"
 #include "ArucoMarker.hpp"
@@ -33,21 +33,14 @@ static inline void helpMsg()
 
 int main()
 {
-    //camera instrinc matrix and distort coefficients
-    const Mat M2_cameraMatrix0 = (Mat_<double>(3, 3)
-        << 926.64,0, 327.76, 0, 926.499, 246.74, 0, 0, 1);
-    const Mat M2_distCoeffs0 = (Mat_<double>(1, 5)
-        << -0.4176,0.1635, 0, 0);
-    const Mat RS_cameraMatrix = (Mat_<double>(3, 3)
-        << 622.60,0, 312.12, 0, 623.37, 235.86, 0, 0, 1);
-    const Mat RS_distCoeffs = (Mat_<double>(1, 4)
-        << 0.156,-0.2792, 0, 0);
-    ArucoMarker rsMarker(vector<int>({5,6,8}), RS_cameraMatrix, RS_distCoeffs);
-    ArucoMarker m2Marker0(vector<int>({4}), M2_cameraMatrix0, M2_distCoeffs0);
-    ArucoMarker m2Marker1(vector<int>({4}), M2_cameraMatrix0, M2_distCoeffs0);
+    using namespace robot_arm::cameraParams;
 
-    VideoCapture camera0(1);    //arm camera
-    VideoCapture camera1(0);    //upper camera
+    ArucoMarker rsMarker(vector<int>({5,6,8}), RS_CM, RS_Dist);
+    ArucoMarker m2Marker0(vector<int>({4}), arm_CM, arm_Dist);
+    ArucoMarker m2Marker1(vector<int>({4}), upper_CM, upper_Dist);
+
+    VideoCapture camera0(0);    //arm camera
+    VideoCapture camera1(1);    //upper camera
     RsVideoCapture camera_rs;
     if(!camera0.isOpened())
     {
@@ -56,7 +49,7 @@ int main()
     }
 
     UsbCAN canII;
-    if(canII.initCAN(UsbCAN::BAUDRATE_500K))
+    if(canII.initCAN(UsbCAN::BAUDRATE_250K))
     {
         cout<<"CAN init successfully"<<endl;
     }

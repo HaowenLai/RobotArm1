@@ -36,7 +36,7 @@ void wifiServer();
 int main()
 {
     UsbCAN canII;
-    if(canII.initCAN(UsbCAN::BAUDRATE_500K))
+    if(canII.initCAN(UsbCAN::BAUDRATE_250K))
     {
         cout<<"init successfully\n"
             <<"transmitting..."<<endl;

@@ -11,7 +11,7 @@ using namespace std;
 using namespace cv;
 
 //global variables
-const vector<int> initValue {127,255,50,125,235,165,100};
+const vector<int> initValue {127,255,50,125,235,165,90};
 vector<int> oldVals = initValue;
 const int motorNumber = 7;
 
@@ -141,13 +141,13 @@ double obstacleHeight(cv::Mat depthRaw,
                       float depthScale,
                       cv::Point2f targetPos)
 {
-    const auto distMin = 0.53f;
-    const auto distMax = 0.63f;
-    const double a = 0.8793;
-    const double b = -192.331;
+    const auto distMin = 0.45f;
+    const auto distMax = 0.72f;
+    const double a = 0.9596;
+    const double b = -231.738;
 
-    //150,180
-    Mat roi = depthRaw(Rect(Point(150,180),targetPos));
+    //280,180
+    Mat roi = depthRaw(Rect(Point(280,180),targetPos));
 
     for(auto y=0;y<roi.rows;y++)
     {
@@ -167,10 +167,21 @@ double obstacleHeight(cv::Mat depthRaw,
 
 double motor1moveAngle(Vec3d targetPos)
 {
-    const Vec3d origin(-249.5, -31.7, 0);
+    const Vec3d origin(263,-7.2, 0);
     return atan((targetPos[1]-origin[1])/(targetPos[0]-origin[0]));
 }
 
+
+int motor1moveValue(Vec3d targetPos)
+{
+    const double coeffs[] {-84.5,16.39,-81.97,123.9};
+    const Vec3d origin(263,-7.2, 0);
+    auto angle = atan((targetPos[1]-origin[1])/(targetPos[0]-origin[0]));
+    auto returnVal = ((coeffs[0]*angle + coeffs[1])
+                        *angle + coeffs[2])
+                        *angle + coeffs[3];
+    return (int)returnVal;
+}
 
 void getDetectImg(robot_arm::EVENT_FLAG& flag)
 {

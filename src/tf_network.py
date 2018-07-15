@@ -7,7 +7,7 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 
 # --------------------------- For position Network --------------
 save_file_path = os.path.join(os.path.split(os.getcwd())[0],'data')
-save_file = os.path.join(save_file_path,'model.ckpt-100000')
+save_file = os.path.join(save_file_path,'model.ckpt-220000')
 inNum  = 2
 outNum = 2
 

@@ -13,6 +13,7 @@
 #include "RsVideoCapture.hpp"
 #include "control.hpp"
 #include "UsbCAN.hpp"
+#include "parameters.hpp"
 
 #include <unistd.h>
 #include <pthread.h>
@@ -22,34 +23,24 @@
 using namespace std;
 using namespace cv;
 
-#define MOTOR2_MIN 50
-#define MOTOR2_MAX 120
+#define MOTOR2_MIN 38
+#define MOTOR2_MAX 170
 #define MOTOR3_MIN 100
-#define MOTOR3_MAX 165
-// #define MOTOR5_MIN 196
-// #define MOTOR5_MAX 255
+#define MOTOR3_MAX 160
 
 bool gRecordFlag = false;
 
 
 void* camera_thread(void* data)
 {
+    using namespace robot_arm::cameraParams;
+    
     //file writer
     ofstream fout;
-    fout.open("/home/savage/data/roboticArm/data7.txt",ios::out|ios::app);
+    fout.open("/home/savage/data/roboticArm/data9.txt",ios::out|ios::app);
     
-    //marker define
-    // const Mat M2_cameraMat = (Mat_<double>(3, 3) 
-    //     << 1208.33,0, 303.71, 0, 1209.325, 246.98, 0, 0, 1);
-    // const Mat M2_distCoeffs = (Mat_<double>(1, 5)
-    //     << -0.3711,-4.0299, 0, 0,22.9040);
-    const Mat RS_cameraMatrix = (Mat_<double>(3, 3)
-        << 622.60,0, 312.12, 0, 623.37, 235.86, 0, 0, 1);
-    const Mat RS_distCoeffs = (Mat_<double>(1, 4)
-        << 0.156,-0.2792, 0, 0);
-    //
     Mat img;
-    ArucoMarker m2Marker(vector<int>({5}), RS_cameraMatrix, RS_distCoeffs);
+    ArucoMarker m2Marker(vector<int>({5}), RS_CM, RS_Dist);
     RsVideoCapture camera;
     namedWindow("rs", WINDOW_AUTOSIZE);
     
@@ -109,6 +100,8 @@ int main()
     //Arm1 init
     vector<int> newValue1;
     reset2initPos(newValue1,canII,1);
+    newValue1[4] = 110;
+    evenVelMove(newValue1,canII,1);
 
     //generate random number
     RNG rng(time(NULL));
@@ -124,11 +117,10 @@ int main()
     {
         newValue1[1]=rng.uniform(MOTOR2_MIN,MOTOR2_MAX);
         newValue1[2]=rng.uniform(MOTOR3_MIN,MOTOR3_MAX);
-        // newValue1[4]=rng.uniform(MOTOR5_MIN,MOTOR5_MAX);
         cout<<newValue1[1]<<" "<<newValue1[2]<<endl;
 
         //move the arm
-        fixStepMove(newValue1,canII,1);
+        evenVelMove(newValue1,canII,1);
         usleep(500*1000);   //let it calm down
         gRecordFlag = true;
         

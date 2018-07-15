@@ -68,19 +68,19 @@ set(detectLetterSrcList
 
 
 
-#add_executable(markerPos ${markerPosSrcList})
+add_executable(markerPos ${markerPosSrcList})
 # add_executable(twoJoints exec/twoJointsSimu.cpp)
 add_executable(smallTests ${smallTestsSrcList})
-# add_executable(dataCollect ${dataCollectSrcList})
+add_executable(dataCollect ${dataCollectSrcList})
 add_executable(manipulate ${manipulateSrcList})
 add_executable(mainTask ${mainTaskSrcList})
 add_executable(detectLetter ${detectLetterSrcList})
 add_executable(startIt exec/startIt.cpp)
 
-#target_link_libraries(markerPos ${OpenCV_LIBS} realsense2)
+target_link_libraries(markerPos ${OpenCV_LIBS} realsense2)
 # target_link_libraries(twoJoints ${OpenCV_LIBS} m)
 target_link_libraries(smallTests ${OpenCV_LIBS} ${PYTHON_LIBRARIES} usbcan realsense2)
-# target_link_libraries(dataCollect ${OpenCV_LIBS} ${PYTHON_LIBRARIES} usbcan pthread realsense2)
+target_link_libraries(dataCollect ${OpenCV_LIBS} ${PYTHON_LIBRARIES} usbcan pthread realsense2)
 target_link_libraries(manipulate ${OpenCV_LIBS} ${PYTHON_LIBRARIES} usbcan realsense2)
 target_link_libraries(mainTask ${OpenCV_LIBS} ${PYTHON_LIBRARIES} usbcan realsense2 pthread)
 target_link_libraries(detectLetter ${OpenCV_LIBS} ${PYTHON_LIBRARIES})
