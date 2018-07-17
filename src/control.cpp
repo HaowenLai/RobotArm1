@@ -15,6 +15,7 @@ const vector<int> initValue {127,255,50,125,235,165,90};
 vector<int> oldVals = initValue;
 const int motorNumber = 7;
 
+
 void fixStepMove(std::vector<int>& newVals,
                  UsbCAN& canDev,
                  int ID)
@@ -139,7 +140,8 @@ void move2desiredPos(double x,double y,
 
 double obstacleHeight(cv::Mat depthRaw,
                       float depthScale,
-                      cv::Point2f targetPos)
+                      cv::Point2f targetPos,
+                      int frontPixelOffset)
 {
     const auto distMin = 0.45f;
     const auto distMax = 0.72f;
@@ -147,7 +149,7 @@ double obstacleHeight(cv::Mat depthRaw,
     const double b = -231.738;
 
     //280,180
-    Mat roi = depthRaw(Rect(Point(280,180),targetPos));
+    Mat roi = depthRaw(Rect(Point(280+frontPixelOffset,180),targetPos));
 
     for(auto y=0;y<roi.rows;y++)
     {
@@ -172,11 +174,11 @@ double motor1moveAngle(Vec3d targetPos)
 }
 
 
-int motor1moveValue(Vec3d targetPos)
+int motor1moveValue(Vec3d targetPos,double upperMmOffset)
 {
     const double coeffs[] {-84.5,16.39,-81.97,123.9};
     const Vec3d origin(263,-7.2, 0);
-    auto angle = atan((targetPos[1]-origin[1])/(targetPos[0]-origin[0]));
+    auto angle = atan((targetPos[1]-origin[1])/(targetPos[0]-upperMmOffset-origin[0]));
     auto returnVal = ((coeffs[0]*angle + coeffs[1])
                         *angle + coeffs[2])
                         *angle + coeffs[3];
@@ -189,3 +191,51 @@ void getDetectImg(robot_arm::EVENT_FLAG& flag)
     flag = robot_arm::TAKE_ROI;
     while(flag!=robot_arm::MISSION_OK);
 }
+
+
+void selfCalibration(ArucoMarker& frontMarker,
+                     ArucoMarker& upperMarker,
+                     double& frontMmOffset, double& upperMmOffset,
+                     int& frontPixelOffset, int& upperPixelOffset,
+                     UsbCAN& canDev,
+                     int ID)
+{
+    const double frontCalibOrigin = -60.0;
+    const double upperCalibOrigin = 70;
+    const int frontPixelOrigin = 234;
+    const int upperPixelOrigin = 508;
+    vector<int> upperCalibValue {127,155,83,0,235,165,90};
+    vector<int> temp;
+
+    //calibrate front camera
+    reset2initPos(temp,canDev,ID);
+    usleep(500*1000);
+    while(1)
+    {
+        if(frontMarker.index(5)!=-1)
+        {
+            frontMmOffset = frontMarker.offset_tVecs[frontMarker.index(5)][0]
+                - frontCalibOrigin;
+            frontPixelOffset = frontMarker.firstCorner(5).x - frontPixelOrigin;
+            break;
+        }
+    }
+
+    //calibrate upper camera
+    evenVelMove(upperCalibValue,canDev,ID);
+    usleep(500*1000);
+    while(1)
+    {
+        if(upperMarker.index(5)!=-1)
+        {
+            upperMmOffset = upperMarker.offset_tVecs[upperMarker.index(5)][0]
+                - upperCalibOrigin;
+            upperPixelOffset = upperMarker.firstCorner(5).x - upperPixelOrigin;
+            break;
+        }
+    }
+
+    //return to initial position
+    reset2initPos(temp,canDev,ID);
+}
+

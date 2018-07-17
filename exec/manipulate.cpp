@@ -27,6 +27,9 @@ static inline void helpMsg()
             "key '7' : select motor 7\n"
             "key ',' : increase value\n"
             "key '.' : decrease value\n"
+            "key 'r' : reset to initial position\n"
+            "key 'z' : decrease speed(step)\n"
+            "key 'x' : increase speed(step)\n"
             "---press <Enter> to continue---";
     cin.get();
 }
@@ -67,6 +70,7 @@ int main()
     //control logic variables
     int motorNum = 0;
     int pwmValue = 128;
+    int step = 1;
     
     while(1)
     {
@@ -108,7 +112,7 @@ int main()
           case '7':
             motorNum = 6;break;
           case ',':
-            pwmValue = (pwmValue==255)?255:pwmValue+1;
+            pwmValue = (pwmValue==255)?255:pwmValue+step;
             newValue1[motorNum] = pwmValue;
             fixStepMove(newValue1,canII,1);
             for(int i=0;i<7;i++)
@@ -116,7 +120,7 @@ int main()
             cout<<endl;
             break;
           case '.':
-            pwmValue = (pwmValue==0)?0:pwmValue-1;
+            pwmValue = (pwmValue==0)?0:pwmValue-step;
             newValue1[motorNum] = pwmValue;
             fixStepMove(newValue1,canII,1);
             for(int i=0;i<7;i++)
@@ -125,6 +129,14 @@ int main()
             break;
           case 'r':
             reset2initPos(newValue1,canII,1);
+            break;
+          case 'z':
+            step=(step==1)?1:step-1;
+            cout<<"step is"<<step<<endl;
+            break;
+          case 'x':
+            step++;
+            cout<<"step is"<<step<<endl;
             break;
           
           default:

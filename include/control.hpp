@@ -12,6 +12,7 @@
 
 #include <vector>
 #include <opencv2/opencv.hpp>
+#include "ArucoMarker.hpp"
 #include "UsbCAN.hpp"
 #include "BpNetwork.hpp"
 
@@ -72,24 +73,35 @@ void move2desiredPos(double x,double y,
 //its height in the img.
 double obstacleHeight(cv::Mat depthRaw,
                       float depthScale,
-                      cv::Point2f targetPos);
+                      cv::Point2f targetPos,
+                      int frontPixelOffset);
 
 
 //  This function retrun the angle between the target and the 
 //yOz plane. Motor 1 should turn pass this angle so as to make
 //the arms and the target in the same plane.
 double motor1moveAngle(cv::Vec3d targetPos);
-
-
+//
+//
 // This function return the value that motor1 should move in
 //order to reach the position that is above the target. It 
 //works based on func `motor1moveAngle`, and its coeffictients
 //are calculated by <atlab.
-int motor1moveValue(cv::Vec3d targetPos);
+int motor1moveValue(cv::Vec3d targetPos,double upperMmOffset);
 
 
 //  wait until the image of letter to be detected is ready
 void getDetectImg(robot_arm::EVENT_FLAG& flag);
 
+
+//  Before the arm can grab cubes precisely, it should be calibrated
+//using this function. The function calculate the offsets in horizontal
+//direction of the front camera and upper camera.
+void selfCalibration(ArucoMarker& frontMarker,
+                     ArucoMarker& upperMarker,
+                     double& frontMmOffset, double& upperMmOffset,
+                     int& frontPixelOffset, int& upperPixelOffset,
+                     UsbCAN& canDev,
+                     int ID);
 
 #endif

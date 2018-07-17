@@ -35,13 +35,15 @@ static void* camera_thread(void* data);
 using namespace robot_arm::cameraParams;
 ArucoMarker m2Marker0(vector<int>({5,6,8}), RS_CM, RS_Dist);    //rs
 ArucoMarker m2Marker1(vector<int>({4}), arm_CM, arm_Dist);      //arm
-ArucoMarker m2Marker2(vector<int>({4}), upper_CM, upper_Dist);  //up
+ArucoMarker m2Marker2(vector<int>({4,5}), upper_CM, upper_Dist);//up
 RsVideoCapture camera_rs;
 
 //global variables, to communicate with camera thread
 auto controlFlag = robot_arm::MISSION_OK;
 Mat detectLetterImg;
 
+double frontMmOffset = 0, upperMmOffset = 0;    //unit:mm
+int frontPixelOffset = 0, upperPixelOffset = 0; //unit:pixel
 
 int main(int argc, char* argv[])
 {
@@ -90,6 +92,11 @@ int main(int argc, char* argv[])
 
     const int diff5_8 = 90; //height difference between #5 and #8
     
+    //calibrate camera
+    selfCalibration(m2Marker0,m2Marker2,
+                    frontMmOffset,upperMmOffset,
+                    frontPixelOffset,upperPixelOffset,canII,1);
+    
 again:
     //get target position
     Vec3d targetPos;
@@ -101,10 +108,10 @@ again:
         if(m2Marker0.index(6) != -1 && m2Marker2.index(4)!=-1)
         {
             targetPos = m2Marker0.offset_tVecs[m2Marker0.index(6)];
-            obstacleH = obstacleHeight(camera_rs.DepthRaw,
-                camera_rs.depth_scale,
-                m2Marker0.firstCorner(6));
-            motor1Val = motor1moveValue(m2Marker2.offset_tVecs[m2Marker2.index(4)]);
+            obstacleH = obstacleHeight(camera_rs.DepthRaw, camera_rs.depth_scale,
+                m2Marker0.firstCorner(6),frontPixelOffset);
+            motor1Val = motor1moveValue(m2Marker2.offset_tVecs[m2Marker2.index(4)],
+                upperMmOffset);
             
             cout<<"target position got ~\n";
             break;
@@ -118,7 +125,7 @@ again:
         motorValues[1] = 230;
         fixStepMove(motorValues,canII,1);
         
-        move2desiredPos(targetPos[0],obstacleH-diff5_8-35,
+        move2desiredPos(targetPos[0]-frontMmOffset,obstacleH-diff5_8-35,
                     motorValues,network,canII,1);
     }
     #ifdef _SINGLE_MOVE_MODE_
@@ -127,7 +134,7 @@ again:
 
     //above the target, for more precise adjustment
     int x_offset = 5;
-    move2desiredPos(targetPos[0]+x_offset,targetPos[1]-diff5_8-35,
+    move2desiredPos(targetPos[0]-frontMmOffset+x_offset,targetPos[1]-diff5_8-35,
                     motorValues,network,canII,1);
     #ifdef _SINGLE_MOVE_MODE_
     cin.get();
@@ -138,6 +145,7 @@ again:
     motorValues[0] = motor1Val;
     fixStepMove(motorValues,canII,1);
     cout << motor1Val << endl;
+    usleep(200*1000);
     #ifdef _SINGLE_MOVE_MODE_
     cin.get();
     #endif
@@ -176,7 +184,7 @@ again:
         {
             //ensure upper label is in vision
             x_offset++;
-            move2desiredPos(targetPos[0]+x_offset,targetPos[1]-diff5_8-35,
+            move2desiredPos(targetPos[0]-frontMmOffset+x_offset,targetPos[1]-diff5_8-35,
                     motorValues,network,canII,1);
             usleep(20*1000);
         }
@@ -192,7 +200,7 @@ again:
     //adjust motor #4(prepare for dig-into step)
     while(true)
     {
-        const float epsilon = 0.3f;
+        const float epsilon = 0.4f;
         const float centerX = 5.8f;
 
         if(!m2Marker1.isNewFrame())
@@ -218,7 +226,7 @@ again:
                 break;
             }
         }//end if(m2Marker1.index(4) != -1)
-        usleep(100*1000);
+        usleep(200*1000);
     }
     #ifdef _SINGLE_MOVE_MODE_
     cin.get();
@@ -226,7 +234,7 @@ again:
 
 
     //dig into the target
-    move2desiredPos(targetPos[0]+x_offset,targetPos[1]-diff5_8-7,
+    move2desiredPos(targetPos[0]-frontMmOffset+x_offset,targetPos[1]-diff5_8-7,
                     motorValues,network,canII,1);
     #ifdef _SINGLE_MOVE_MODE_
     cin.get();
@@ -309,14 +317,14 @@ again:
     else
     {
         //move the cube to another place (167,-8.0)
-        move2desiredPos(targetPos[0],-20.0-diff5_8,
+        move2desiredPos(targetPos[0]-frontMmOffset,-20.0-diff5_8,
                         motorValues,network,canII,1);
         motorValues[0] = 127;
         motorValues[3] = 125;
         motorValues[4] = 255;
         motorValues[5] = 165;
         evenVelMove(motorValues,canII,1);
-        move2desiredPos(175,-18.0-diff5_8,
+        move2desiredPos(175-frontMmOffset,-18.0-diff5_8,
                         motorValues,network,canII,1);
         cout<<"finish moving the cube ~\n";
         
@@ -325,7 +333,7 @@ again:
         fixStepMove(motorValues,canII,1);
         
         //wait for arm0 to finish stamping
-        move2desiredPos(60,-160,motorValues,network,canII,1);
+        move2desiredPos(60-frontMmOffset,-160,motorValues,network,canII,1);
         s_wifi.sendMsg(Wifi::MSG_TARGET_IN_POSITION,1);
         while(!s_wifi.recvNewMSG(1));
 
@@ -337,7 +345,8 @@ again:
             if(m2Marker0.index(6) != -1 && m2Marker2.index(4)!=-1)
             {
                 targetPos = m2Marker0.offset_tVecs[m2Marker0.index(6)];
-                motor1Val = motor1moveValue(m2Marker2.offset_tVecs[m2Marker2.index(4)]);
+                motor1Val = motor1moveValue(m2Marker2.offset_tVecs[m2Marker2.index(4)],
+                    upperPixelOffset);
                 
                 cout<<"target position got ~\n";
                 break;
@@ -349,7 +358,7 @@ again:
 
         //above the target, for more precise adjustment
         x_offset = 0;
-        move2desiredPos(targetPos[0]+x_offset,targetPos[1]-diff5_8-35,
+        move2desiredPos(targetPos[0]-frontMmOffset+x_offset,targetPos[1]-diff5_8-35,
                         motorValues,network,canII,1);
         #ifdef _SINGLE_MOVE_MODE_
         cin.get();
@@ -400,7 +409,7 @@ again:
             {
                 //ensure upper label is in vision
                 x_offset++;
-                move2desiredPos(targetPos[0]+x_offset,targetPos[1]-diff5_8-35,
+                move2desiredPos(targetPos[0]-frontMmOffset+x_offset,targetPos[1]-diff5_8-35,
                         motorValues,network,canII,1);
                 usleep(20*1000);
             }
@@ -416,7 +425,7 @@ again:
         //adjust motor #4(prepare for dig-into step)
         while(true)
         {
-            const float epsilon = 0.3f;
+            const float epsilon = 0.4f;
             const float centerX = 5.8f;
 
             if(!m2Marker1.isNewFrame())
@@ -442,7 +451,7 @@ again:
                     break;
                 }
             }//end if(m2Marker1.index(4) != -1)
-            usleep(100*1000);
+            usleep(200*1000);
         }
         #ifdef _SINGLE_MOVE_MODE_
         cin.get();
@@ -450,50 +459,12 @@ again:
 
 
         //dig into the target
-        move2desiredPos(targetPos[0]+x_offset,targetPos[1]-diff5_8-7,
+        move2desiredPos(targetPos[0]-frontMmOffset+x_offset,targetPos[1]-diff5_8-7,
                         motorValues,network,canII,1);
         usleep(500*1000);
         #ifdef _SINGLE_MOVE_MODE_
         cin.get();
         #endif
-
-        /*
-        //adjust motor #5 to vertical direction
-        cout<<"start to adjust motor #5...\n";
-        while(true)
-        {
-            const double epsilon = 16;
-
-            if(!m2Marker0.isNewFrame())
-                continue;
-
-            auto index8 = m2Marker0.index(8);
-            if(index8 != -1)
-            {
-                if(m2Marker0.offset_tVecs[index8][0] - targetPos[0] > epsilon)
-                {
-                    motorValues[4] += 1;
-                    fixStepMove(motorValues,canII,1);
-                }
-                else if(m2Marker0.offset_tVecs[index8][0] - targetPos[0] < -epsilon)
-                {
-                    motorValues[4] -= 1;
-                    fixStepMove(motorValues,canII,1);
-                }
-                else
-                {
-                    cout<<"#5 is in position ~\n";
-                    break;
-                }
-            }//end if(index8 != -1)
-
-            if(motorValues[4]==255 || motorValues[4]==0)
-                break;
-        }
-        #ifdef _SINGLE_MOVE_MODE_
-        cin.get();
-        #endif
-        */
 
         //use #7 to grab the cube
         cout<<"start to grab the cube\n";
@@ -502,7 +473,7 @@ again:
         cout<<"grab the cube successfully ~\n";
 
         //move to "correct" place
-        move2desiredPos(targetPos[0]+x_offset,targetPos[1]-diff5_8-45,
+        move2desiredPos(targetPos[0]-frontMmOffset+x_offset,targetPos[1]-diff5_8-45,
                         motorValues,network,canII,1);
         motorValues = vector<int> {94,68,92,125,255,165,140};
         evenVelMove(motorValues,canII,1);
@@ -537,10 +508,10 @@ again:
 static void* camera_thread(void* data)
 {
     //white area
-    Rect unQualifyArea(Point(174,34),Point(269,120));
-    Rect qualifyArea(Point(169,346),Point(264,438));
+    Rect unQualifyArea(Point(174+upperPixelOffset,34),Point(269+upperPixelOffset,120));
+    Rect qualifyArea(Point(169+upperPixelOffset,346),Point(264+upperPixelOffset,438));
     
-    Mat img0, img1, img2, img_21;
+    Mat img0, img1, img2, img21;
     VideoCapture camera1(0);    //arm camera
     VideoCapture camera2(1);    //upper camera
 
@@ -557,7 +528,7 @@ static void* camera_thread(void* data)
         camera2 >> img2;
         
         //deal with the already grab cubes
-        img_21 = img2.clone();
+        img21 = img2.clone();
         img2(unQualifyArea).setTo(Scalar(255,255,255));
         img2(qualifyArea).setTo(Scalar(255,255,255));
         
@@ -568,15 +539,15 @@ static void* camera_thread(void* data)
         #ifndef _NO_VIDEO_MODE_
         m2Marker0.outputOffset(img0,Point(30,30));
         m2Marker1.outputOffset(img1,Point(30,30));
-        m2Marker2.outputOffset(img2,Point(30,30));
+        m2Marker2.outputOffset(img21,Point(30,30));
         imshow("view_front",img0);
         imshow("view_arm",img1);
-        imshow("view_up",img_21);
+        imshow("view_up",img21);
         #endif
 
         if(controlFlag == robot_arm::TAKE_ROI)
         {
-            detectLetterImg = img0(Rect(405,118,50,50)).clone();
+            detectLetterImg = img0(Rect(405+frontPixelOffset*2,118,50,50)).clone();
             imshow("Letter",detectLetterImg);
             controlFlag = robot_arm::MISSION_OK;
         }
