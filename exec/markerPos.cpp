@@ -1,6 +1,7 @@
 #include "parameters.hpp"
 #include "RsVideoCapture.hpp"
-#include "ArucoMarker.hpp"
+#include "position.hpp"
+#include "control.hpp"
 #include <time.h>
 
 using namespace cv;
@@ -39,53 +40,25 @@ void take_photo(Mat& img)
 	imwrite(img_path,img);
 }
 
-double obstacleHeight(cv::Mat depthRaw,
-                      float depthScale,
-                      cv::Point2f targetPos)
-{
-    const auto distMin = 0.53f;
-    const auto distMax = 0.63f;
-    const double a = 0.8793;
-    const double b = -192.331;
-
-    //150,180
-    Mat roi = depthRaw(Rect(Point(150,180),targetPos));
-
-    for(auto y=0;y<roi.rows;y++)
-    {
-        auto depth = roi.ptr<uint16_t>(y);
-        for(auto x=0;x<roi.cols;x++)
-        {
-            auto pixels_distance = depthScale * depth[x];
-            if(pixels_distance > distMin && pixels_distance < distMax)
-            {
-                return a*(180+y)+b;
-            }
-        }
-    }
-    return a*targetPos.y+b;
-}
-
-
-
 
 //detect ArUco markers and estimate pose
 int main()
 {
     using namespace robot_arm::cameraParams;
+    using namespace robot_arm::cubePos;
 
-    Mat img_m0,img_m1;
-    ArucoMarker m2Marker0(vector<int>({5,6}), RS_CM, RS_Dist);
-    // ArucoMarker m2Marker1(vector<int>({4}), M2_cameraMatrix1, M2_distCoeffs1);
+    Mat img_m0;
+    ArucoMarker m2Marker0(vector<int>({4}), upper_CM, upper_Dist);
+    CubePosition cubeP(upperArea,upperValidLenMax,upperValidLenMin);
 
     helpMsg();
 
-    // VideoCapture camera1(4);
+    // RsVideoCapture camera_rs;
+    VideoCapture camera1(3);
     // VideoCapture camera1(0);
     // camera.set(CV_CAP_PROP_FRAME_WIDTH,1024);
     // camera.set(CV_CAP_PROP_FRAME_HEIGHT,768);
 
-    RsVideoCapture camera_rs;
 
     namedWindow("M0", WINDOW_AUTOSIZE);
     // namedWindow("M1", WINDOW_AUTOSIZE);
@@ -93,26 +66,20 @@ int main()
 
     while (1)
     {
-        camera_rs >> img_m0;
+        camera1 >> img_m0;
+        cubeP.detect(img_m0);
         m2Marker0.detect(img_m0);
-        m2Marker0.outputOffset(img_m0,Point(30,30));
         
-        // camera1 >> img_m1;
-        // m2Marker1.detect(img_m1);
-        // m2Marker1.outputOffset(img_m1,Point(30,30));
-
+        cubeP.drawBoundry(img_m0);
+        cubeP.outputPos(img_m0,Point(30,30));
+        m2Marker0.outputOffset(img_m0,Point2i(30,60));
+        
+        //cout<<upperPC2upperAC(cubeP.getPosition())<<endl;
+        auto targetPC = cubeP.getPosition();
+        auto targetUPos = upperPC2upperAC(targetPC);
+        cout<< motor1moveValue(targetUPos)<<endl;
+  
         imshow("M0", img_m0);
-        // imshow("M1", img_m1);
-        
-        //obstacle test
-        // if(m2Marker0.index(6)!=-1)
-        // {
-        //     auto targetPos = m2Marker0.firstCorner(6);
-        //     auto height = obstacleHeight(camera_rs.DepthRaw,
-        //         camera_rs.depth_scale,targetPos);
-        //     cout << height <<endl;
-        // }
-        
         
         switch ((char)waitKey(50))
         {
@@ -122,7 +89,7 @@ int main()
           case 'q':
             return 0;
           case 't':
-            take_photo(img_m1);
+            take_photo(img_m0);
             break;
           default:
             break;

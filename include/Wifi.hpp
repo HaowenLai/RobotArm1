@@ -19,10 +19,12 @@ class Wifi
     enum WIFI_MSG
     {
         MSG_PREPARE_TO_DETECT,
+        MSG_TARGET_IN_POSITION,
         MSG_TARGET_QUALIFIED,
         MSG_TARGET_UNQUALIFIED,
-        MSG_TARGET_IN_POSITION,
-        MSG_FINISH_STAMPING,
+        MSG_TARGET_BLANK,
+        MSG_START_A_NEW_JOB,
+        MSG_FINISH_A_JOB,
         MSG_FINISH_ALL_JOB,
         MSG_ROGOR
     };

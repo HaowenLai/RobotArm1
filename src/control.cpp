@@ -11,12 +11,12 @@ using namespace std;
 using namespace cv;
 
 //global variables
-const vector<int> initValue {127,255,50,125,235,165,90};
+const vector<int> initValue {127,255,50,125,235,165,75};
 vector<int> oldVals = initValue;
 const int motorNumber = 7;
 
 
-void fixStepMove(std::vector<int>& newVals,
+void fixStepMove(std::vector<int> const& newVals,
                  UsbCAN& canDev,
                  int ID)
 {
@@ -51,7 +51,7 @@ void fixStepMove(std::vector<int>& newVals,
 }
 
 
-void evenVelMove(std::vector<int>& newVals,
+void evenVelMove(std::vector<int> const& newVals,
                  UsbCAN& canDev,
                  int ID)
 {
@@ -185,10 +185,40 @@ int motor1moveValue(Vec3d targetPos,double upperMmOffset)
     return (int)returnVal;
 }
 
-void getDetectImg(robot_arm::EVENT_FLAG& flag)
+void getDetectImg(robot_arm::CHECK_SURFACE mission,
+                  robot_arm::CHECK_SURFACE& flag,
+                  UsbCAN& canDev,
+                  int ID)
 {
-    usleep(100*1000);
-    flag = robot_arm::TAKE_ROI;
+    using namespace robot_arm;
+
+    const vector<int> bottomVals {119,168,102,0,255,180,190};
+    const vector<int> backVals   {135,168,102,125,255,28,190};
+    const vector<int> frontVals  {79,168,102,133,255,276,190};
+    
+    switch(mission)
+    {
+        case CHECK_BOTTOM_SURFACE:
+            evenVelMove(bottomVals,canDev,ID);
+            usleep(200*1000);
+            flag = CHECK_BOTTOM_SURFACE;
+            break;
+        case CHECK_BACK_SURFACE:
+            evenVelMove(backVals,canDev,ID);
+            usleep(200*1000);
+            flag = CHECK_BACK_SURFACE;
+            break;
+        case CHECK_FRONT_SURFACE:
+            evenVelMove(frontVals,canDev,ID);
+            usleep(200*1000);
+            flag = CHECK_FRONT_SURFACE;
+            break;
+        case CHECK_UPPER_SURFACE:
+            usleep(200*1000);
+            flag = CHECK_UPPER_SURFACE;
+            break;
+    }
+    
     while(flag!=robot_arm::MISSION_OK);
 }
 

@@ -35,7 +35,20 @@ namespace robot_arm
     };
 
 
+    namespace cubePos
+    {
+        //upper area to detect cube
+        const cv::Rect upperArea(cv::Point(330,103),cv::Point(507,340));
+        //upper valid perimeter length
+        const double upperValidLenMax = 200.0;
+        const double upperValidLenMin = 170.0;
 
+        //arm area to detect cube
+        const cv::Rect armArea(cv::Point(140,110),cv::Point(605,450));
+        //arm valid perimeter length
+        const double armValidLenMax = 1100.0;
+        const double armValidLenMin = 800.0;
+    };
 
 
 

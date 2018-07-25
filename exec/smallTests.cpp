@@ -10,8 +10,7 @@
 
 #include "UsbCAN.hpp"
 #include "BpNetwork.hpp"
-#include "LettersClassify.hpp"
-#include "ArucoMarker.hpp"
+#include "position.hpp"
 #include "RsVideoCapture.hpp"
 #include "control.hpp"
 #include "Wifi.hpp"
@@ -29,7 +28,7 @@ void singleMove(UsbCAN& canII);
 void receiveFromCAN(UsbCAN& canII);
 void matlabPredict(UsbCAN& canII);
 void tfPredict(UsbCAN& canII);
-void letterSort();
+void numberSort();
 void wifiClient();
 void wifiServer();
 
@@ -48,7 +47,7 @@ int main()
            "3. receiveFromCAN\n"
            "4. matlabPredict\n"
            "5. tfPredict\n"
-           "6. letterSort\n"
+           "6. numberSort\n"
            "7. wifi client\n"
            "8. wifi server\n";
     
@@ -72,7 +71,7 @@ int main()
         tfPredict(canII);
         break;
       case 6:
-        letterSort();
+        numberSort();
         break;
       case 7:
         wifiClient();
@@ -224,9 +223,9 @@ void tfPredict(UsbCAN& canII)
     }
 }
 
-
+/*
 //a test to LetterClassify.py
-void letterSort()
+void numberSort()
 {
     //! Network parameter
     string modulePath = "/home/savage/workspace/cpp_ws/Aruco-marker/src";
@@ -255,7 +254,7 @@ void letterSort()
             cout<<"wrong!!@@##"<<endl;
     }
 }
-
+*/
 
 //wifi client to send and receive message
 void wifiClient()

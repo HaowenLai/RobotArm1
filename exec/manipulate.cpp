@@ -6,7 +6,7 @@
 #include "parameters.hpp"
 #include "UsbCAN.hpp"
 #include "control.hpp"
-#include "ArucoMarker.hpp"
+#include "position.hpp"
 #include "RsVideoCapture.hpp"
 #include <stdio.h>
 #include <iostream>
@@ -38,14 +38,14 @@ int main()
 {
     using namespace robot_arm::cameraParams;
 
-    ArucoMarker rsMarker(vector<int>({5,6,8}), RS_CM, RS_Dist);
-    ArucoMarker m2Marker0(vector<int>({4}), arm_CM, arm_Dist);
-    ArucoMarker m2Marker1(vector<int>({4}), upper_CM, upper_Dist);
+    ArucoMarker rsMarker(vector<int>({6}), RS_CM, RS_Dist);
+    ArucoMarker armMarker(vector<int>({4}), arm_CM, arm_Dist);
+    ArucoMarker upperMarker(vector<int>({4}), upper_CM, upper_Dist);
 
-    VideoCapture camera0(0);    //arm camera
-    VideoCapture camera1(1);    //upper camera
-    RsVideoCapture camera_rs;
-    if(!camera0.isOpened())
+    VideoCapture armCamera(4);    //arm camera
+    VideoCapture upperCamera(3); //upper camera
+    RsVideoCapture rsCamera;
+    if(!armCamera.isOpened() || !upperCamera.isOpened())
     {
         cout<<"cannot open camera"<<endl;
         return -1;
@@ -57,7 +57,7 @@ int main()
         cout<<"CAN init successfully"<<endl;
     }
 
-    Mat img0,img1,img2;
+    Mat rsImg,armImg,upperImg;
     helpMsg();
     namedWindow("front",WINDOW_AUTOSIZE);
     namedWindow("arm",WINDOW_AUTOSIZE);
@@ -72,28 +72,35 @@ int main()
     int pwmValue = 128;
     int step = 1;
     
+    CubePosition upperCube(robot_arm::cubePos::upperArea,
+                        robot_arm::cubePos::upperValidLenMax,
+                        robot_arm::cubePos::upperValidLenMin);
+    CubePosition armCube(robot_arm::cubePos::armArea,
+                        robot_arm::cubePos::armValidLenMax,
+                        robot_arm::cubePos::armValidLenMin);
+    
     while(1)
     {
-        camera_rs >> img0;
-        camera0   >> img1;
-        camera1   >> img2;
-        rsMarker.detect(img0);
-        rsMarker.outputOffset(img0,Point(30,30));
-        m2Marker0.detect(img1);
-        m2Marker0.outputOffset(img1,Point(30,30));
-        m2Marker1.detect(img2);
-        m2Marker1.outputOffset(img2,Point(30,30));
-        imshow("front",img0);
-        imshow("arm",img1);
-        imshow("upper",img2);
+        rsCamera    >> rsImg;
+        armCamera   >> armImg;
+        upperCamera >> upperImg;
+        rsMarker.detect(rsImg);
+        rsMarker.outputOffset(rsImg,Point(30,30));
+        armMarker.detect(armImg);
+        armMarker.outputOffset(armImg,Point(30,30));
+        upperMarker.detect(upperImg);
+        upperMarker.outputOffset(upperImg,Point(30,30));
+        
+        upperCube.detect(upperImg);
+        upperCube.drawBoundry(upperImg);
+        armCube.detect(armImg);
+        armCube.drawBoundry(armImg);
+        
+        
+        imshow("front",rsImg);
+        imshow("arm",armImg);
+        imshow("upper",upperImg);
 
-        // if(m2Marker1.index(4)!=-1)
-        // {
-        //     auto m1angle = motor1moveAngle(m2Marker1.offset_tVecs[m2Marker1.index(4)]);
-        //     newValue1[0] = -90.91 * m1angle + 127;
-        //     fixStepMove(newValue1,canII,1);
-        //     cout << m1angle << endl;
-        // }
 
         switch ((char)waitKey(30))
         {

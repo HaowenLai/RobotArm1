@@ -9,13 +9,13 @@
  * target to corresponding places.
  *
  * @Author : Derek Lai (LHW)
- * @Date   : 2018/7/5
+ * @Date   : 2018/7/18
  * ************************************************************/
 
 #include "parameters.hpp"
 #include "UsbCAN.hpp"
 #include "BpNetwork.hpp"
-#include "ArucoMarker.hpp"
+#include "position.hpp"
 #include "RsVideoCapture.hpp"
 #include "Wifi.hpp"
 #include "control.hpp"
@@ -32,18 +32,30 @@ using namespace cv;
 
 static void* camera_thread(void* data);
 
-using namespace robot_arm::cameraParams;
-ArucoMarker m2Marker0(vector<int>({5,6,8}), RS_CM, RS_Dist);    //rs
-ArucoMarker m2Marker1(vector<int>({4}), arm_CM, arm_Dist);      //arm
-ArucoMarker m2Marker2(vector<int>({4,5}), upper_CM, upper_Dist);//up
+ArucoMarker  rsMarker(vector<int> {8}, 
+                      robot_arm::cameraParams::RS_CM,
+                      robot_arm::cameraParams::RS_Dist);      //rs
+CubePosition upperCube(robot_arm::cubePos::upperArea,
+                       robot_arm::cubePos::upperValidLenMax,
+                       robot_arm::cubePos::upperValidLenMin);//upper
+CubePosition   armCube(robot_arm::cubePos::armArea,
+                       robot_arm::cubePos::armValidLenMax,
+                       robot_arm::cubePos::armValidLenMin);  //arm
+
+
 RsVideoCapture camera_rs;
 
 //global variables, to communicate with camera thread
-auto controlFlag = robot_arm::MISSION_OK;
-Mat detectLetterImg;
+auto ckeckSurfaceFlag = robot_arm::MISSION_OK;
+Mat detectNumImg;
+Mat detectBeforeResize;
+    
 
+
+//self calibration variables
 double frontMmOffset = 0, upperMmOffset = 0;    //unit:mm
 int frontPixelOffset = 0, upperPixelOffset = 0; //unit:pixel
+
 
 int main(int argc, char* argv[])
 {
@@ -81,37 +93,40 @@ int main(int argc, char* argv[])
     TfNetwork network(modulePath,moduleName,funcName);
     
     //wifi communication
-    Wifi s_wifi(1234,2);
+    Wifi s_wifi(1234,1);
 
     //Arm1 initialize
     vector<int> motorValues;
     reset2initPos(motorValues,canII,1);
     cout << "Program is ready.\nPress <enter> to continue.." << endl;
-    cin.get();
+    
     //------------------ begin algrithm -----------------------
 
     const int diff5_8 = 90; //height difference between #5 and #8
     
     //calibrate camera
-    selfCalibration(m2Marker0,m2Marker2,
-                    frontMmOffset,upperMmOffset,
-                    frontPixelOffset,upperPixelOffset,canII,1);
+    // selfCalibration(rsMarker,m2Marker2,
+    //                 frontMmOffset,upperMmOffset,
+    //                 frontPixelOffset,upperPixelOffset,canII,1);
     
 again:
+    cin.get();
     //get target position
-    Vec3d targetPos;
-    double obstacleH;
+    Vec3d targetFPos, targetUPos; //front position, upper position
+    // double obstacleH;
     int motor1Val;
     cout<<"start to get target position...\n";
     while(true)
     {
-        if(m2Marker0.index(6) != -1 && m2Marker2.index(4)!=-1)
+        if(upperCube.cubeExist())
         {
-            targetPos = m2Marker0.offset_tVecs[m2Marker0.index(6)];
-            obstacleH = obstacleHeight(camera_rs.DepthRaw, camera_rs.depth_scale,
-                m2Marker0.firstCorner(6),frontPixelOffset);
-            motor1Val = motor1moveValue(m2Marker2.offset_tVecs[m2Marker2.index(4)],
-                upperMmOffset);
+            usleep(500*1000);
+            auto targetPC = upperCube.getPosition();
+            targetFPos = upperPC2frontAC(targetPC);
+            targetUPos = upperPC2upperAC(targetPC);
+            // obstacleH = obstacleHeight(camera_rs.DepthRaw, camera_rs.depth_scale,
+            //     rsMarker.firstCorner(6),frontPixelOffset);
+            motor1Val = motor1moveValue(targetUPos);
             
             cout<<"target position got ~\n";
             break;
@@ -119,29 +134,28 @@ again:
     }
 
     //deal with obstacle
-    if(obstacleH < 40)
-    {
-        cout<<"avoid obstacle"<<endl;
-        motorValues[1] = 230;
-        fixStepMove(motorValues,canII,1);
+    // if(obstacleH < 40)
+    // {
+    //     cout<<"avoid obstacle"<<endl;
+    //     motorValues[1] = 230;
+    //     fixStepMove(motorValues,canII,1);
         
-        move2desiredPos(targetPos[0]-frontMmOffset,obstacleH-diff5_8-35,
-                    motorValues,network,canII,1);
-    }
-    #ifdef _SINGLE_MOVE_MODE_
-    cin.get();
-    #endif
+    //     move2desiredPos(targetPos[0]-frontMmOffset,obstacleH-diff5_8-35,
+    //                 motorValues,network,canII,1);
+    // }
+    // #ifdef _SINGLE_MOVE_MODE_
+    // cin.get();
+    // #endif
 
     //above the target, for more precise adjustment
-    int x_offset = 5;
-    move2desiredPos(targetPos[0]-frontMmOffset+x_offset,targetPos[1]-diff5_8-35,
+    int x_offset = 7;
+    move2desiredPos(targetFPos[0]-frontMmOffset+x_offset,targetFPos[1]-diff5_8-40,
                     motorValues,network,canII,1);
     #ifdef _SINGLE_MOVE_MODE_
     cin.get();
     #endif
 
     //motor #1 roughly move (rotate)
-    //motorValues[0] = -94.0 * motor1angle + 126;
     motorValues[0] = motor1Val;
     fixStepMove(motorValues,canII,1);
     cout << motor1Val << endl;
@@ -154,14 +168,14 @@ again:
     int marker4AdjustCount = 0;
     while(true)
     {
-        const float epsilon = 0.02f;
+        const float epsilon = 0.05f;
 
-        if(!m2Marker1.isNewFrame())
+        if(!armCube.isNewFrame())
             continue;
 
-        if(m2Marker1.index(4) != -1)
+        if(armCube.cubeExist())
         {
-            auto angle_offset = m2Marker1.angle(4);
+            auto angle_offset = armCube.angle();
             marker4AdjustCount = 0;
             
             if(angle_offset > epsilon)
@@ -179,36 +193,39 @@ again:
                 cout<<"#6 is in position ~\n";
                 break;
             }
-        }//end if(m2Marker1.index(4) != -1)
-        else if(marker4AdjustCount > 10)
+        }//end if(armCube.cubeExist())
+        else if(marker4AdjustCount > 4)
         {
             //ensure upper label is in vision
             x_offset++;
-            move2desiredPos(targetPos[0]-frontMmOffset+x_offset,targetPos[1]-diff5_8-35,
+            marker4AdjustCount = 0;
+            move2desiredPos(targetFPos[0]-frontMmOffset+x_offset,targetFPos[1]-diff5_8-40,
                     motorValues,network,canII,1);
-            usleep(20*1000);
+            
         }
         else
         {
             marker4AdjustCount++;
+            // usleep(10*1000);
         }
     }
     #ifdef _SINGLE_MOVE_MODE_
     cin.get();
     #endif
 
+    
     //adjust motor #4(prepare for dig-into step)
     while(true)
     {
-        const float epsilon = 0.4f;
-        const float centerX = 5.8f;
+        const float epsilon = 10.0f;
+        const float centerX = 410.0f;
 
-        if(!m2Marker1.isNewFrame())
+        if(!armCube.isNewFrame())
             continue;
 
-        if(m2Marker1.index(4) != -1)
+        if(armCube.cubeExist())
         {
-            float targetX = m2Marker1.offset_tVecs[m2Marker1.index(4)][0];
+            float targetX = armCube.getPosition().x;
             
             if(targetX - centerX > epsilon)
             {
@@ -234,30 +251,31 @@ again:
 
 
     //dig into the target
-    move2desiredPos(targetPos[0]-frontMmOffset+x_offset,targetPos[1]-diff5_8-7,
+    move2desiredPos(targetFPos[0]-frontMmOffset+x_offset,targetFPos[1]-diff5_8-2,
                     motorValues,network,canII,1);
     #ifdef _SINGLE_MOVE_MODE_
     cin.get();
     #endif
 
+/*
     //adjust motor #5 to vertical direction
     cout<<"start to adjust motor #5...\n";
     while(true)
     {
         const double epsilon = 16;
 
-        if(!m2Marker0.isNewFrame())
+        if(!rsMarker.isNewFrame())
             continue;
 
-        auto index8 = m2Marker0.index(8);
+        auto index8 = rsMarker.index(8);
         if(index8 != -1)
         {
-            if(m2Marker0.offset_tVecs[index8][0] - targetPos[0] > epsilon)
+            if(rsMarker.offset_tVecs[index8][0] - targetFPos[0] > epsilon)
             {
                 motorValues[4] += 1;
                 fixStepMove(motorValues,canII,1);
             }
-            else if(m2Marker0.offset_tVecs[index8][0] - targetPos[0] < -epsilon)
+            else if(rsMarker.offset_tVecs[index8][0] - targetFPos[0] < -epsilon)
             {
                 motorValues[4] -= 1;
                 fixStepMove(motorValues,canII,1);
@@ -275,14 +293,189 @@ again:
     #ifdef _SINGLE_MOVE_MODE_
     cin.get();
     #endif
+*/
 
     //use #7 to grab the cube
     cout<<"start to grab the cube\n";
-    motorValues[6] = 140;
+    motorValues[6] = 190;
     fixStepMove(motorValues,canII,1);
     cout<<"grab the cube successfully ~\n";
 
+    //check surface
+    //check bottom surface
+    getDetectImg(robot_arm::CHECK_BOTTOM_SURFACE,
+                 ckeckSurfaceFlag,canII,1);
+    s_wifi.sendMsg(Wifi::MSG_PREPARE_TO_DETECT,0);
+    while(!s_wifi.recvNewMSG(0));
+    s_wifi.sendMsg(detectNumImg.data,50*50*3,0);
+    while(!s_wifi.recvNewMSG(0));
+    if(s_wifi.message == Wifi::MSG_TARGET_QUALIFIED)
+    {
+        motorValues = vector<int> {97,80,95,125,235,165,190};
+        evenVelMove(motorValues,canII,1);
+        usleep(200*1000);
+
+        motorValues[6] = 90;
+        fixStepMove(motorValues,canII,1);
+        usleep(200*1000);
+
+        reset2initPos(motorValues,canII,1);
+        goto checkCount;
+    }
+    else if(s_wifi.message == Wifi::MSG_TARGET_UNQUALIFIED)
+    {
+        motorValues = vector<int> {153,65,95,125,235,165,190};
+        evenVelMove(motorValues,canII,1);
+        usleep(200*1000);
+
+        motorValues[6] = 90;
+        fixStepMove(motorValues,canII,1);
+        usleep(200*1000);
+
+        reset2initPos(motorValues,canII,1);
+        goto checkCount;
+    }
     
+    //check back surface
+    getDetectImg(robot_arm::CHECK_BACK_SURFACE,
+                 ckeckSurfaceFlag,canII,1);
+    s_wifi.sendMsg(Wifi::MSG_PREPARE_TO_DETECT,0);
+    while(!s_wifi.recvNewMSG(0));
+    s_wifi.sendMsg(detectNumImg.data,50*50*3,0);
+    while(!s_wifi.recvNewMSG(0));
+    if(s_wifi.message == Wifi::MSG_TARGET_QUALIFIED)
+    {
+        motorValues = vector<int> {97,80,95,125,235,165,190};
+        evenVelMove(motorValues,canII,1);
+        usleep(200*1000);
+
+        motorValues[6] = 90;
+        fixStepMove(motorValues,canII,1);
+        usleep(200*1000);
+
+        reset2initPos(motorValues,canII,1);
+        goto checkCount;
+    }
+    else if(s_wifi.message == Wifi::MSG_TARGET_UNQUALIFIED)
+    {
+        motorValues = vector<int> {153,65,95,125,235,165,190};
+        evenVelMove(motorValues,canII,1);
+        usleep(200*1000);
+
+        motorValues[6] = 90;
+        fixStepMove(motorValues,canII,1);
+        usleep(200*1000);
+
+        reset2initPos(motorValues,canII,1);
+        goto checkCount;
+    }
+    
+    //check front surface
+    getDetectImg(robot_arm::CHECK_FRONT_SURFACE,
+                 ckeckSurfaceFlag,canII,1);
+    s_wifi.sendMsg(Wifi::MSG_PREPARE_TO_DETECT,0);
+    while(!s_wifi.recvNewMSG(0));
+    s_wifi.sendMsg(detectNumImg.data,50*50*3,0);
+    while(!s_wifi.recvNewMSG(0));
+    if(s_wifi.message == Wifi::MSG_TARGET_QUALIFIED)
+    {
+        motorValues = vector<int> {97,80,95,125,235,165,190};
+        evenVelMove(motorValues,canII,1);
+        usleep(200*1000);
+
+        motorValues[6] = 90;
+        fixStepMove(motorValues,canII,1);
+        usleep(200*1000);
+        
+        reset2initPos(motorValues,canII,1);
+        goto checkCount;
+    }
+    else if(s_wifi.message == Wifi::MSG_TARGET_UNQUALIFIED)
+    {
+        motorValues = vector<int> {153,65,95,125,235,165,190};
+        evenVelMove(motorValues,canII,1);
+        usleep(200*1000);
+
+        motorValues[6] = 90;
+        fixStepMove(motorValues,canII,1);
+        usleep(200*1000);
+
+        reset2initPos(motorValues,canII,1);
+        goto checkCount;
+    }
+
+
+    //move to passing position
+    motorValues = vector<int> {130,53,133,96,219,39,190};
+    evenVelMove(motorValues,canII,1);
+    usleep(100*1000);
+    //
+    motorValues[2] = 136;
+    fixStepMove(motorValues,canII,1);
+    usleep(100*1000);
+    //
+    motorValues[6] = 124;
+    fixStepMove(motorValues,canII,1);
+    usleep(100*1000);
+    //
+    //loose clip
+    motorValues[6] = 90;
+    fixStepMove(motorValues,canII,1);
+    reset2initPos(motorValues,canII,1);
+
+
+    //check up surface
+    getDetectImg(robot_arm::CHECK_UPPER_SURFACE,
+                 ckeckSurfaceFlag,canII,1);
+    s_wifi.sendMsg(Wifi::MSG_PREPARE_TO_DETECT,0);
+    while(!s_wifi.recvNewMSG(0));
+    s_wifi.sendMsg(detectNumImg.data,50*50*3,0);
+    while(!s_wifi.recvNewMSG(0));
+    if(s_wifi.message == Wifi::MSG_TARGET_QUALIFIED)
+    {
+        s_wifi.sendMsg(Wifi::MSG_TARGET_QUALIFIED,0);
+    }
+    else if(s_wifi.message == Wifi::MSG_TARGET_UNQUALIFIED)
+    {
+        s_wifi.sendMsg(Wifi::MSG_TARGET_UNQUALIFIED,0);
+    }
+    else
+    {
+        s_wifi.sendMsg(Wifi::MSG_TARGET_IN_POSITION,0);
+    }
+    
+    
+    //black arm to grab the cube
+    while(!s_wifi.recvNewMSG(0));
+    if(s_wifi.message == Wifi::MSG_FINISH_A_JOB)
+    {
+        s_wifi.sendMsg(Wifi::MSG_START_A_NEW_JOB,0);
+        goto checkCount;
+    }
+
+    
+
+/*    
+    //move to unqualified place
+    motorValues[0] = 154;
+    motorValues[3] = 125;
+    motorValues[4] = 255;
+    motorValues[5] = 165;
+    evenVelMove(motorValues,canII,1);
+    //
+    motorValues[1] = 62;
+    motorValues[2] = 89;
+    evenVelMove(motorValues,canII,1);
+
+    //loose clip
+    motorValues[6] = 90;
+    fixStepMove(motorValues,canII,1);
+    
+    //reset
+    reset2initPos(motorValues,canII,1);
+*/
+
+/*
     //check the bottom surface
     s_wifi.sendMsg(Wifi::MSG_PREPARE_TO_DETECT,0);
     motorValues = vector<int> {79,110,123,0,235,194,140};
@@ -342,9 +535,9 @@ again:
         cout<<"start to get stamped target position\n";
         while(true)
         {
-            if(m2Marker0.index(6) != -1 && m2Marker2.index(4)!=-1)
+            if(rsMarker.index(6) != -1 && m2Marker2.index(4)!=-1)
             {
-                targetPos = m2Marker0.offset_tVecs[m2Marker0.index(6)];
+                targetPos = rsMarker.offset_tVecs[rsMarker.index(6)];
                 motor1Val = motor1moveValue(m2Marker2.offset_tVecs[m2Marker2.index(4)],
                     upperPixelOffset);
                 
@@ -485,8 +678,9 @@ again:
         //reset
         reset2initPos(motorValues,canII,1);
     }
-    
+*/
     //whether it has finished all jobs
+checkCount:
     if(runCount < runTimes)
     {
         runCount++;
@@ -495,8 +689,8 @@ again:
 
     //wait...
     cout<<"\n~~~ I FINISH MY JOB ~~~\n-- press 'q' to exit --\n";
-    s_wifi.sendMsg(Wifi::MSG_FINISH_ALL_JOB,0);
-    s_wifi.sendMsg(Wifi::MSG_FINISH_ALL_JOB,1);
+    // s_wifi.sendMsg(Wifi::MSG_FINISH_ALL_JOB,0);
+    // s_wifi.sendMsg(Wifi::MSG_FINISH_ALL_JOB,1);
     pthread_join(cameraThread, NULL);
     
     return 0;
@@ -507,13 +701,17 @@ again:
 //camera thread for func `moveInRoute`
 static void* camera_thread(void* data)
 {
-    //white area
-    Rect unQualifyArea(Point(174+upperPixelOffset,34),Point(269+upperPixelOffset,120));
-    Rect qualifyArea(Point(169+upperPixelOffset,346),Point(264+upperPixelOffset,438));
+    //number detection area
+    const Size detectSize(50,50);
+    const Rect bottomArea(Point(382,67),Point(410,115));
+    const Rect backArea(Point(341,177),Point(367,220));
+    const Rect frontArea(Point(325,155),Point(365,195));
+    const Rect upperArea(Point(235,205),Point(281,260));
     
-    Mat img0, img1, img2, img21;
-    VideoCapture camera1(0);    //arm camera
-    VideoCapture camera2(1);    //upper camera
+    
+    Mat rsImg, armImg, upperImg;
+    VideoCapture   armCamera(4);    //arm camera
+    VideoCapture upperCamera(3);    //upper camera
 
     #ifndef _NO_VIDEO_MODE_
     namedWindow("view_front", WINDOW_AUTOSIZE);
@@ -521,35 +719,56 @@ static void* camera_thread(void* data)
     namedWindow("view_up", WINDOW_AUTOSIZE);
     #endif
 
-    while((char)waitKey(20) != 'q')
+    while((char)waitKey(30) != 'q')
     {
-        camera_rs >> img0;
-        camera1 >> img1;
-        camera2 >> img2;
+        camera_rs   >> rsImg;
+        armCamera   >> armImg;
+        upperCamera >> upperImg;
         
-        //deal with the already grab cubes
-        img21 = img2.clone();
-        img2(unQualifyArea).setTo(Scalar(255,255,255));
-        img2(qualifyArea).setTo(Scalar(255,255,255));
-        
-        m2Marker0.detect(img0);
-        m2Marker1.detect(img1);
-        m2Marker2.detect(img2);
+        rsMarker.detect(rsImg);
+        armCube.detect(armImg);
+        upperCube.detect(upperImg);
 
         #ifndef _NO_VIDEO_MODE_
-        m2Marker0.outputOffset(img0,Point(30,30));
-        m2Marker1.outputOffset(img1,Point(30,30));
-        m2Marker2.outputOffset(img21,Point(30,30));
-        imshow("view_front",img0);
-        imshow("view_arm",img1);
-        imshow("view_up",img21);
+        rsMarker.outputOffset(rsImg,Point(30,30));
+        armCube.drawBoundry(armImg);
+        armCube.outputPos(armImg,Point(30,30));
+        upperCube.drawBoundry(upperImg);
+        upperCube.outputPos(upperImg,Point(30,30));
+        imshow("view_front",rsImg);
+        imshow("view_arm",armImg);
+        imshow("view_up",upperImg);
         #endif
 
-        if(controlFlag == robot_arm::TAKE_ROI)
+        //take detect roi
+        if(ckeckSurfaceFlag == robot_arm::CHECK_BOTTOM_SURFACE)
         {
-            detectLetterImg = img0(Rect(405+frontPixelOffset*2,118,50,50)).clone();
-            imshow("Letter",detectLetterImg);
-            controlFlag = robot_arm::MISSION_OK;
+            detectBeforeResize = rsImg(bottomArea).clone();
+            resize(detectBeforeResize,detectNumImg,detectSize);
+            cout<<detectNumImg.cols<<" "<<detectNumImg.rows<<endl;
+            imshow("number",detectNumImg);
+            ckeckSurfaceFlag = robot_arm::MISSION_OK;
+        }
+        else if(ckeckSurfaceFlag == robot_arm::CHECK_BACK_SURFACE)
+        {
+            detectBeforeResize = rsImg(backArea).clone();
+            resize(detectBeforeResize,detectNumImg,detectSize);
+            imshow("number",detectNumImg);
+            ckeckSurfaceFlag = robot_arm::MISSION_OK;
+        }
+        else if(ckeckSurfaceFlag == robot_arm::CHECK_FRONT_SURFACE)
+        {
+            detectBeforeResize = rsImg(frontArea).clone();
+            resize(detectBeforeResize,detectNumImg,detectSize);
+            imshow("number",detectNumImg);
+            ckeckSurfaceFlag = robot_arm::MISSION_OK;
+        }
+        else if(ckeckSurfaceFlag == robot_arm::CHECK_UPPER_SURFACE)
+        {
+            detectBeforeResize = upperImg(upperArea).clone();
+            resize(detectBeforeResize,detectNumImg,detectSize);
+            imshow("number",detectNumImg);
+            ckeckSurfaceFlag = robot_arm::MISSION_OK;
         }
     }
 

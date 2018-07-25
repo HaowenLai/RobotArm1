@@ -102,6 +102,7 @@ void Wifi::sendMsg(unsigned char* msg,int length)
         throw 0;
     }
     write(sock_fd, msg, length);
+    usleep(10*1000);
 }
 
 //server send message
@@ -125,6 +126,7 @@ void Wifi::sendMsg(unsigned char* msg,int length,int clientNumber)
         throw 1;
     }
     write(client_fd[clientNumber],msg,length);
+    usleep(10*1000);
 }
 
 //client recv message
@@ -157,9 +159,16 @@ bool Wifi::recvNewMSG(unsigned char* msg,int length)
         throw 0;
     }
 
-    auto len = read(sock_fd,msg,length);
+    int nCount=0;
+    unsigned char buff[10000];
+    while(nCount!=length)
+    {
+        auto len = read(sock_fd,buff,length);
+        memcpy(msg+nCount,buff,len);
+        nCount+=len;
+    }
 
-    if(len == 0)
+    if(nCount == 0)
         return false;
     else
         return true;
@@ -195,9 +204,16 @@ bool Wifi::recvNewMSG(unsigned char* msg,int length,int clientNumber)
         throw 1;
     }
 
-    auto len = read(client_fd[clientNumber],msg,length);
+    int nCount=0;
+    unsigned char buff[10000];
+    while(nCount!=length)
+    {
+        auto len = read(sock_fd,buff,length);
+        memcpy(msg+nCount,buff,len);
+        nCount+=len;
+    }
 
-    if(len == 0)
+    if(nCount == 0)
         return false;
     else
         return true;
